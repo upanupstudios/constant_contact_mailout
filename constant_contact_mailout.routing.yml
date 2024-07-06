@@ -1,0 +1,70 @@
+constant_contact_mailout.admin_index:
+  path: '/admin/config/services/constant_contact_mailout'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Constant Contact Mailout'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.connections:
+  path: '/admin/config/services/constant_contact_mailout/connections'
+  defaults:
+    _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionsForm'
+    _title: 'Connections'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.connections.add:
+  path: '/admin/config/services/constant_contact_mailout/connections/add'
+  defaults:
+    _title: 'Add connection'
+    _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionForm'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.connections.edit:
+  path: '/admin/config/services/constant_contact_mailout/connections/edit/{id}'
+  defaults:
+    _title: 'Edit connection'
+    _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionForm'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.connections.delete:
+  path: '/admin/config/services/constant_contact_mailout/connections/delete/{id}'
+  defaults:
+    _title: 'Delete connection'
+    _form: '\Drupal\constant_contact_mailout\Form\AdminDeleteConnectionForm'
+    disabled: false
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.connections.authorize:
+  path: '/admin/config/services/constant_contact_mailout/connections/authorize'
+  defaults:
+    _title: 'Disable activity'
+    _controller: '\Drupal\constant_contact_mailout\Controller\ConnectionsController::authorize'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE
+
+constant_contact_mailout.settings:
+  path: '/admin/config/services/constant_contact_mailout/settings'
+  defaults:
+    _form: '\Drupal\constant_contact_mailout\Form\AdminSettingsForm'
+    _title: 'Settings'
+  requirements:
+    _permission: 'administer constant_contact_mailout'
+  options:
+    _admin_route: TRUE

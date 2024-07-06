@@ -1,0 +1,21 @@
+constant_contact_mailout_fieldsettings:
+  js:
+    js/constant_contact_mailout_fieldsettings.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+constant_contact_mailout_widget:
+  js:
+    js/constant_contact_mailout_widget.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+constant_contact_mailout_subscribe_block_form:
+  js:
+    js/constant_contact_mailout_subscribe_block_form.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/jquery.once

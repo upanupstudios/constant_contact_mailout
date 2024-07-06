@@ -1,0 +1,10 @@
+name: 'Constant Contact Mailout'
+type: module
+description: 'Adds a field type to send email notification to subscribers with Constant Contact.'
+core_version_requirement: ^8 || ^9 || ^10
+# version: 1.0
+package: 'Contact Contact'
+dependencies:
+  - drupal:field
+
+configure: constant_contact_mailout.connections

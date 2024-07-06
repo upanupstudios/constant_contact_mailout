@@ -1,0 +1,100 @@
+{% set type = entity.type.entity.label() %}
+
+{# H1 custom text #}
+{% set heading = entity.title.value %}
+{% if (type == 'News' or type == 'Event') and entity.field_types is not empty %}
+    {% set heading = heading ~ ' - ' %}
+    {% for term in entity.field_types %}
+        {% if loop.first %}
+			{% set heading = heading ~ term.entity.label %}
+		{% else %}
+			{% set heading = heading ~ ', ' ~ term.entity.label %}
+		{% endif %}
+    {% endfor %}
+{% elseif type == 'Alert' %}
+    {% for term in entity.field_alert_level %}
+        {% if loop.first %}
+			{% set heading = heading ~ ' - ' ~ term.entity.label %}
+		{% endif %}
+    {% endfor %}
+{% endif %}
+
+<html>
+<head>
+	<style>
+		* {margin:0;padding:0;font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;}
+		h1 {margin:10px 0;font-size:26px;line-height:34px;color: #0b5b28;font-weight:bold;}
+		h2 {margin:0 0 20px;font-size:20px;line-height:30px;color: #0b5b28;font-weight:bold;}
+		h3 {margin:0 0 20px;font-size:20px;line-height:26px;color: #0b5b28;font-weight:bold;}
+		p {margin:15px 0;line-height:26px;}
+		ul {margin:20px 0 20px 40px;list-style:disc;list-style-position:inside;}
+	</style>
+</head>
+<body>
+	<table border="0" cellpadding="0" cellspacing="0" width="100%" align="cetner" style="margin: 0 auto;padding:0;background-color:#FFFFFF;max-width:600px;">
+		<tbody style="color: #333;font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size: 15px;border-collapse: collapse;">
+			<tr>
+				<td valign="top" style="padding:20px 20px 10px;">
+					<h1>{{ heading }}</h1>				
+					
+					{% if type != 'Event' %}
+						<h2>{{ entity.field_date.value|date('F j, Y') }}</h2>
+					{% endif %}
+
+					{# Event dates (start, end, recurring) and location info #}
+					{% if type == 'Event' %}
+						<p>
+							{% if entity.field_when is iterable %}
+								{% for date in entity.field_when %}
+										{% if date.value and date.end_value %}
+											{{ date.value|date('l, F j Y, g:i a') }} - {{ date.end_value|date('g:i a') }}<br />
+										{% else %}
+											{{ date.value|date('l, F j Y, g:i a') }}<br />
+										{% endif %}
+								{% endfor %}
+							{% else %}
+								{% if entity.field_when.value and entity.field_when.end_value %}
+									{{ entity.field_when.value|date('l, F j Y, g:i a') }} - {{ entity.field_when.end_value|date('g:i a') }}<br />
+								{% else %}
+									{{ entity.field_when.value|date('l, F j Y, g:i a') }}<br />
+								{% endif %}
+							{% endif %}
+						</p>
+
+						{% if entity.field_location_name.value is not empty %}
+							<strong>Location:</strong> {{ entity.field_location_name.value }}<br />
+						{% endif %}
+						{% if entity.field_location_address1.value is not empty %}
+							{{ entity.field_location_address1.value|striptags }}
+						{% endif %}
+					{% endif %}
+
+					{% if type == 'Alert' %}
+						{% if entity.field_snippet.value is not empty %}
+							<p>{{ entity.field_snippet.value }}</p>
+						{% endif %}
+					{% endif %}
+
+					{# Content rows #}
+					{% if (type == 'News' or type == 'Event') and entity.field_content_rows is not empty %}
+						{% for row in entity.field_content_rows|slice(0, 1) %}
+							{% if row.entity is defined %}
+								<div class="content-row">
+									{% for content in row.entity.field_row_content %}
+										{% if content.value is defined %}
+											<p>{{ content.value|striptags|length > 250 ? content.value|replace({'&nbsp;': ' '})|striptags|slice(0, 250) ~ '...' : content.value|replace({'&nbsp;': ' '})|striptags }}</p>
+										{% endif %}
+									{% endfor %}
+								</div>
+							{% endif %}
+						{% endfor %}
+					{% endif %}
+
+					{% set url = url('entity.node.canonical', {'node': entity.id}) %}
+					<p style="margin:40px 0;"><a href="{{ url }}" style="color:#0b5b28;padding: 19px 24px;line-height: 1.2em;text-decoration: none;text-transform: uppercase;border: 1px solid #000;-webkit-border-radius: 32px;-moz-border-radius: 32px;border-radius: 32px;padding-top: 12px;padding-bottom: 12px;text-decoration:none;">Read</a></p>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>

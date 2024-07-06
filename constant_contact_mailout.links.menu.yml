@@ -1,0 +1,17 @@
+constant_contact_mailout.admin_index:
+  title: Constant Contact Mailout
+  description: 'Configure Constant Contact.'
+  parent: system.admin_config_services
+  route_name: constant_contact_mailout.admin_index
+
+constant_contact_mailout.connections:
+  title: 'Connections'
+  route_name: constant_contact_mailout.connections
+  description: 'Manage connections.'
+  parent: constant_contact_mailout.admin_index
+
+constant_contact_mailout.settings:
+  title: 'Settings'
+  route_name: constant_contact_mailout.settings
+  description: 'Configure settings.'
+  parent: constant_contact_mailout.admin_index

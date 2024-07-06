@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ * Constant Contact Mailout module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Hide allowed number of values.
+ */
+function constant_contact_mailout_form_field_storage_config_edit_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
+  $storage = $form_state->getStorage();
+
+  /** @var \Drupal\field\Entity\FieldConfig $field_config */
+  $field_config = $storage['field_config'];
+
+  $field_type = $field_config->get('field_type');
+
+  if ($field_type == 'constant_contact_mailout') {
+    // Hide the cardinality setting:
+    $form['cardinality_container']['cardinality_number']['#default_value'] = 1;
+    $form['cardinality_container']['#access'] = FALSE;
+
+    $form['#validate'][] = 'constant_contact_mailout_form_field_ui_field_edit_form_validate';
+  }
+}
+
+/**
+ * Validation handler for constant_contact_mailout_form_field_ui_field_edit_form_validate.
+ *
+ * Ensure cardinality is set to 1 on constant_contact_mailout fields.
+ */
+function constant_contact_mailout_form_field_ui_field_edit_form_validate(&$form, FormStateInterface &$form_state) {
+  $storage = $form_state->getStorage();
+
+  /** @var \Drupal\field\Entity\FieldConfig $field_config */
+  $field_config = $storage['field_config'];
+
+  if ($field_config->get('field_type') == 'constant_contact_mailout') {
+    if ($form_state->getValue('cardinality_number') != 1) {
+      $form_state->setErrorByName('cardinality_number', t('Cardinality on constant_contact mailout fields must be set to 1.'));
+    }
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function constant_contact_mailout_theme($existing, $type, $theme, $path) {
+  return [
+    'constant_contact_mailout' => [
+      'variables' => [
+        'entity' => NULL,
+        'theme_settings' => NULL
+      ],
+      'template' => 'constant_contact_mailout',
+    ],
+    'subscribe_block' => [
+      'variables' => [
+        'subscribe_block_form' => NULL,
+        'data' => [
+          'description' => NULL,
+        ],
+      ],
+      'render element' => 'form'
+    ],
+  ];
+}
+
+/**
+ * Implements hook_help().
+ */
+function constant_contact_mailout_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the constant_contact mailout module.
+    case 'help.page.constant_contact_mailout':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Adds a field type to send email notification to subscribers with Constant Contact.') . '</p>';
+      return $output;
+
+    default:
+  }
+}

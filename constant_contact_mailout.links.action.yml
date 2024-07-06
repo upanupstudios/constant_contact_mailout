@@ -1,0 +1,5 @@
+constant_contact_mailout.connections.add:
+  route_name: constant_contact_mailout.connections.add
+  title: 'Add connection'
+  appears_on:
+    - constant_contact_mailout.connections
