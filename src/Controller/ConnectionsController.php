@@ -148,6 +148,7 @@ class ConnectionsController extends ControllerBase {
         $connections[$id] = $connection;
 
         // Save connections.
+        // @todo CHeck how this is saved... when refreshed, auto refresh it at certain times...
         $settings = $this->configFactory->getEditable('constant_contact_mailout.settings');
         $settings->set('connections', $connections)
           ->save();

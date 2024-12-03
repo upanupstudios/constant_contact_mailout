@@ -1,4 +1,4 @@
 services:
   constant_contact_mailout.api:
     class: Drupal\constant_contact_mailout\ApiService
-    arguments: ['@config.factory', '@logger.factory']
+    arguments: ['@config.factory', '@logger.factory', '@messenger']

@@ -14,14 +14,16 @@ class TextHelper {
    *
    * @param string $string
    *   String to be converted.
+   * @param string $separator
+   *   Text to be used as the separator.
    *
    * @return string
    *   String with converted to machine name.
    */
-  public static function textToMachineName($string) {
-    $transliterated = \Drupal::transliteration()->transliterate($string, LanguageInterface::LANGCODE_DEFAULT, '_');
+  public static function textToMachineName($string, $separator = '_') {
+    $transliterated = \Drupal::transliteration()->transliterate($string, LanguageInterface::LANGCODE_DEFAULT, $separator);
     $transliterated = mb_strtolower($transliterated);
-    $transliterated = preg_replace('@[^a-z0-9_.]+@', '_', $transliterated);
+    $transliterated = preg_replace('@[^a-z0-9_.]+@', $separator, $transliterated);
 
     return $transliterated;
   }

@@ -129,19 +129,11 @@ class AdminSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $settings = $this->config('constant_contact_mailout.settings');
-
-    $debug_render_template = $form_state->getValue('debug_render_template');
-
-    $settings->set('debug_render_template', $debug_render_template)
+    // Save settings.
+    $this->config('constant_contact_mailout.settings')
+      ->set('debug_render_template', $form_state->getValue('debug_render_template'))
+      ->set('debug_sendto_contact_list', $form_state->getValue('debug_sendto_contact_list'))
       ->save();
-
-    $debug_sendto_contact_list = $form_state->getValue('debug_sendto_contact_list');
-
-    $settings->set('debug_sendto_contact_list', $debug_sendto_contact_list)
-      ->save();
-
-    $this->messenger->addStatus($this->t('The settings has been saved.'));
 
     return parent::submitForm($form, $form_state);
   }

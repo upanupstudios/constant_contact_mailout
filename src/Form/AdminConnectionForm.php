@@ -123,6 +123,8 @@ class AdminConnectionForm extends ConfigFormBase {
       '@constant_contact' => Link::fromTextAndUrl($this->t('Constant Contact'), $contant_contact_url)->toString(),
     ]));
 
+    // @todo: Add note to add the following redirect_uri: /admin/config/services/constant_contact_mailout/connections/authorize
+
     $app_integration_url = Url::fromUri('https://developer.constantcontact.com/api_guide/apps_create.html', ['attributes' => ['target' => '_blank']]);
 
     $form['api'] = [
@@ -188,7 +190,6 @@ class AdminConnectionForm extends ConfigFormBase {
       '#description' => $this->t('Leave empty to use from email'),
     ];
 
-    // @todo Re-authorize on edit.
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = [
       '#type' => 'submit',

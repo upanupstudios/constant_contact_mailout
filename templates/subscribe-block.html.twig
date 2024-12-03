@@ -6,3 +6,8 @@
     {{ subscribe_block_form }}
   </div>
 </div>
+<script id="MessageTemplate" type="text/x-jquery-tmpl">
+  <div role="contentinfo" aria-label="Status message" class="messages messages--${type}">
+    <div class="messages__message">{{ '{{html message}}' }}</div>
+  </div>
+</script>

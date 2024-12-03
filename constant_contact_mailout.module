@@ -9,6 +9,22 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
+ * Implements hook_help().
+ */
+function constant_contact_mailout_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the constant_contact mailout module.
+    case 'help.page.constant_contact_mailout':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Adds a field type to send email notification to subscribers with Constant Contact.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  *
  * Hide allowed number of values.
@@ -52,11 +68,13 @@ function constant_contact_mailout_form_field_ui_field_edit_form_validate(&$form,
  * Implements hook_theme().
  */
 function constant_contact_mailout_theme($existing, $type, $theme, $path) {
-  return [
+  // Define templates.
+  $templates = [
     'constant_contact_mailout' => [
       'variables' => [
+        'is_new' => NULL,
         'entity' => NULL,
-        'theme_settings' => NULL
+        'theme_settings' => NULL,
       ],
       'template' => 'constant_contact_mailout',
     ],
@@ -67,23 +85,53 @@ function constant_contact_mailout_theme($existing, $type, $theme, $path) {
           'description' => NULL,
         ],
       ],
-      'render element' => 'form'
+      'render element' => 'form',
     ],
   ];
+
+  // Get all node types.
+  $node_types = \Drupal::service('entity_type.manager')->getStorage('node_type')->loadMultiple();
+
+  if (!empty($node_types)) {
+    foreach ($node_types as $node_type) {
+      $field_definitions = \Drupal::service('entity_field.manager')->getFieldDefinitions('node', $node_type->id());
+
+      foreach ($field_definitions as $field_definition) {
+        $bundle = $field_definition->getTargetBundle();
+
+        if (!empty($bundle)) {
+          // Check if the node types has the constant contact field.
+          if ($field_definition->getType() == 'constant_contact_mailout') {
+            // Add template for bundle.
+            $templates['constant_contact_mailout_' . $bundle] = [
+              'variables' => [
+                'is_new' => NULL,
+                'entity' => NULL,
+                'theme_settings' => NULL,
+              ],
+              'template' => 'constant_contact_mailout_' . $bundle,
+            ];
+          }
+        }
+      }
+    }
+  }
+
+  return $templates;
 }
 
 /**
- * Implements hook_help().
+ * Implements hook_cron().
  */
-function constant_contact_mailout_help($route_name, RouteMatchInterface $route_match) {
-  switch ($route_name) {
-    // Main module help for the constant_contact mailout module.
-    case 'help.page.constant_contact_mailout':
-      $output = '';
-      $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('Adds a field type to send email notification to subscribers with Constant Contact.') . '</p>';
-      return $output;
+function constant_contact_mailout_cron($forceRefresh = FALSE) {
+  $api = \Drupal::service('constant_contact_mailout.api');
+  $settings = \Drupal::config('constant_contact_mailout.settings');
+  $connections = $settings->get('connections');
 
-    default:
+  // @todo Add debug message.
+  if (!empty($connections)) {
+    foreach ($connections as $connection) {
+      $api->refreshAccessToken($connection, $forceRefresh);
+    }
   }
 }

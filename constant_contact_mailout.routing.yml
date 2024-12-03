@@ -52,7 +52,7 @@ constant_contact_mailout.connections.delete:
 constant_contact_mailout.connections.authorize:
   path: '/admin/config/services/constant_contact_mailout/connections/authorize'
   defaults:
-    _title: 'Disable activity'
+    _title: 'Authorize connection'
     _controller: '\Drupal\constant_contact_mailout\Controller\ConnectionsController::authorize'
   requirements:
     _permission: 'administer constant_contact_mailout'

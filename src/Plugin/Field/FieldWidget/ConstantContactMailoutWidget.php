@@ -4,6 +4,7 @@ namespace Drupal\constant_contact_mailout\Plugin\Field\FieldWidget;
 
 use Drupal\constant_contact_mailout\Utility\TextHelper;
 use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -38,6 +39,7 @@ class ConstantContactMailoutWidget extends WidgetBase {
     $contact_list_creation = $this->getFieldSetting('contact_list_creation');
     $contact_list_ids = $this->getFieldSetting('contact_list_ids');
     $contact_list_select = $this->getFieldSetting('contact_list_select');
+    $node_types = $this->getFieldSetting('node_types');
     $description = NULL;
     $contact_lists = [];
     $contact_list_names = [];
@@ -95,12 +97,27 @@ class ConstantContactMailoutWidget extends WidgetBase {
             '#value' => $items[$delta]->contact_list_id,
           ];
 
-          $description = $this->t('The contact list will be dynamically created and sent the mailout to for this single node.');
+          if ($items->getEntity()->isNew()) {
+            $description = $this->t('The contact list will be dynamically created, if it does not exist. Mailout will be sent to the subscribers for this content.');
+          }
+          else {
+            if (!empty($contact_lists)) {
+              foreach ($contact_lists as $name => $lists) {
+                foreach ($lists as $contact_list_id => $contact_list_name) {
+                  if ($contact_list_id == $items[$delta]->contact_list_id) {
+                    $contact_list_names[] = $contact_list_name->__toString();
+                  }
+                }
+              }
+            }
+
+            $description = $this->t('Mailout will be sent to the @contact_list_names contact list.', [
+              '@contact_list_names' => implode(', ', $contact_list_names),
+            ]);
+          }
         }
         elseif ($contact_list_creation == 'select') {
           if (empty($contact_list_select)) {
-            $contact_list_names = [];
-
             if (!empty($contact_lists)) {
               foreach ($contact_lists as $name => $lists) {
                 foreach ($lists as $contact_list_id => $contact_list_name) {
@@ -110,8 +127,10 @@ class ConstantContactMailoutWidget extends WidgetBase {
                 }
               }
             }
+          }
 
-            $description = $this->t('Mailout will be sent to @contact_list_names contact lists.', [
+          if (!empty($contact_list_names)) {
+            $description = $this->t('Mailout will be sent to the @contact_list_names contact list(s).', [
               '@contact_list_names' => implode(', ', $contact_list_names),
             ]);
           }
@@ -122,6 +141,89 @@ class ConstantContactMailoutWidget extends WidgetBase {
         elseif ($contact_list_creation == 'taxonomy') {
           $description = $this->t('Mailout will be sent to the contact lists mapped in the taxonomy term.');
         }
+        elseif ($contact_list_creation == 'reference') {
+          if (!empty($node_types)) {
+            $entity = $items->getEntity();
+            $entity_type_id = $entity->getEntityType()->id();
+            $content_type = $entity->getType();
+            $definitions = $entity->getFieldDefinitions($entity_type_id, $content_type);
+
+            if (!empty($definitions)) {
+              foreach ($definitions as $definition) {
+                if ($definition instanceof FieldConfigInterface) {
+                  if ($definition->getType() == 'entity_reference') {
+                    $settings = $definition->getSettings();
+
+                    if ($settings['target_type'] == 'node') {
+                      $target_bundle = reset($settings['handler_settings']['target_bundles']);
+
+                      if (in_array($target_bundle, $node_types)) {
+                        // Get field machine name.
+                        $field_name = $definition->getName();
+
+                        // Get value.
+                        $value = $entity->$field_name->getValue();
+                        $value = reset($value);
+
+                        if (!empty($value['target_id'])) {
+                          // Load entity.
+                          $_entity = \Drupal::entityTypeManager()->getStorage($settings['target_type'])->load($value['target_id']);
+
+                          $_definitions = $_entity->getFieldDefinitions();
+
+                          if (!empty($_definitions)) {
+                            foreach ($_definitions as $_definition) {
+                              if ($_definition instanceof FieldConfigInterface) {
+                                $fieldType = $_definition->getFieldStorageDefinition()->getType();
+
+                                if ($fieldType == 'constant_contact_mailout') {
+                                  $settings = $_definition->getSettings();
+
+                                  // Must be set as dynamic, what if select?
+                                  if (!empty($settings['contact_list_creation']) && $settings['contact_list_creation'] == 'dynamic') {
+                                    $field_name = $_definition->getName();
+                                    $value = $_entity->$field_name->getValue();
+                                    $value = reset($value);
+
+                                    if (!empty($value['contact_list_id'])) {
+                                      if (!empty($contact_lists)) {
+                                        foreach ($contact_lists as $name => $lists) {
+                                          foreach ($lists as $contact_list_id => $contact_list_name) {
+                                            if ($value['contact_list_id'] == $contact_list_id) {
+                                              $contact_list_names[] = $contact_list_name->__toString();
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          if (!empty($contact_list_names)) {
+            $description = $this->t('Mailout will be sent to the @contact_list_names contact list(s).', [
+              '@contact_list_names' => implode(', ', $contact_list_names),
+            ]);
+          }
+          else {
+            // @todo if dynamic add
+            $description = $this->t('The contact list will be dynamically created, if it does not exist. Mailout will be sent to the subscribers of the entity referenced from this content.');
+          }
+        }
+      }
+
+      if ($this->getFieldSetting('sendnow_description')) {
+        $description = $this->getFieldSetting('sendnow_description');
       }
 
       $element['sendnow'] = [

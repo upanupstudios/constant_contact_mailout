@@ -1,5 +1,18 @@
 TODO:
 
+Something wrong with this one when trying to connect or refresh
+Need to refresh token when expired somehow
+
+
+
+// @todo Refresh connections and contact lists in cron.
+
+Try to add this module through composer from private GitHub
+
+Use cron to refresh the API.
+
+The site should always be connected online, but should be handled if unable to connect to wrap in a try/catch.
+
 Field Config
 Change taxonomies to list of vocabulary checkboxes
 Hide/show list of terms from selected vocabularies
@@ -9,9 +22,11 @@ If dynamic, add description
 If taxonomy, add description
 If select, add description.
 If select before sending, add description and show list
+Add send now description
 
 Subscription Block
 Option to use entity mailout field settings, this would only work if set to select list is off.
+Option which fields to enable, first name, last name, email, confirm email, consent checkbox?
 If not, choose list(s) to added to.
 
 

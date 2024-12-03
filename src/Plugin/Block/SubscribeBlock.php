@@ -2,8 +2,8 @@
 
 namespace Drupal\constant_contact_mailout\Plugin\Block;
 
+use Drupal\block\Entity\Block;
 use Drupal\constant_contact_mailout\Form\SubscribeBlockForm;
-use Drupal\constant_contact_mailout\Utility\TextHelper;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormBuilderInterface;
@@ -84,13 +84,18 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
   public function defaultConfiguration() {
     return [
       'description' => NULL,
+      'fields' => [],
       'subscription' => 'select',
+      'connection_id' => NULL,
+      'contact_list_prefix' => NULL,
       'contact_list_ids' => [],
+      'show_contact_lists' => TRUE,
+      'show_select_all' => FALSE,
       'group_contact_lists_label' => $this->t('General'),
       'group_contact_lists' => FALSE,
       'group_contact_lists_delimiter' => NULL,
-      'success_message' => NULL,
-      'unsubscribe' => NULL,
+      'subscribed_message' => NULL,
+      'unsubscribed_message' => NULL,
     ];
   }
 
@@ -100,127 +105,183 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
   public function blockForm($form, FormStateInterface $form_state) {
     $form = parent::blockForm($form, $form_state);
 
-    // Get settings.
-    $connections = $this->settings->get('connections');
-    $contact_list_options = [];
+    $form['constant_contact'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Constant Contact'),
+      '#open' => TRUE,
+    ];
 
-    $form['description'] = [
+    $form['constant_contact']['fields'] = [
+      '#title' => $this->t('Fields'),
+      '#description' => $this->t('Check fields to be displayed on the subscription form.'),
+      '#type' => 'checkboxes',
+      '#required' => TRUE,
+      '#default_value' => $this->configuration['fields'],
+      '#options' => [
+        'first_name' => $this->t('First Name'),
+        'last_name' => $this->t('Last Name'),
+        'email' => $this->t('Email (required)'),
+        'confirm_email' => $this->t('Confirm Email'),
+      ],
+    ];
+
+    $form['constant_contact']['description'] = [
       '#type' => 'text_format',
       '#title' => $this->t('Description'),
       '#default_value' => $this->configuration['description'],
     ];
 
-    $form['subscription'] = [
-      '#title' => $this->t('Subscription'),
-      '#type' => 'radios',
-      '#default_value' => $this->configuration['subscription'],
-      '#options' => [
-        'dynamic' => $this->t('Subscribe users to dynamically created contact list from an entity'),
-        // - Note mailout settings needs to be configured with Dynamic?
-        // The signup should be independent of the mailout settings.
-        // Which entity? chose which bundle
-        'select' => $this->t('Subscribe users to selected contact lists'),
-      ],
-      '#attributes' => [
-        'class' => [
-          'subscription-radios',
-        ],
-      ],
-    ];
+    // Get settings.
+    $connections = $this->settings->get('connections');
+    $active_connections = [];
+    $contact_lists = [];
 
-    $form['subscription_select'] = [
-      '#type' => 'details',
-      // @todo Title is not working
-      '#title' => $this > t('Select contact lists'),
-      '#open' => TRUE,
-      '#attributes' => [
-        'class' => [
-          'subscription-select-details',
-        ],
-      ],
-    ];
-
-    // @todo For dynamic creation, choose which entity
-    // @todo Allow which connetions to use?
     if (!empty($connections)) {
       foreach ($connections as $connection) {
+        // @todo check if authorized? Check access_token?
+        $active_connections[$connection['id']] = $connection['name'];
+
         if (!empty($connection['lists'])) {
           foreach ($connection['lists'] as $list) {
-            $contact_list_id = $connection['id'] . ':' . $list['list_id'];
+            $id = $connection['id'] . ':' . $list['list_id'];
 
-            $contact_list_options[$connection['name']][$contact_list_id] = $this->t('@name (@membership_count subscribers)', [
+            $contact_lists[$connection['name']][$id] = $this->t('@name (@membership_count subscribers)', [
               '@name' => $list['name'],
               '@membership_count' => $list['membership_count'],
             ]);
           }
         }
-
-        if (!empty($contact_list_options)) {
-          foreach ($contact_list_options as $name => $options) {
-            // Sort by value.
-            // @todo Sort when saving
-            uasort($options, function ($a, $b) {
-              return strcmp($a->__toString(), $b->__toString());
-            });
-
-            // Store sorted list.
-            $contact_list_options[$name] = $options;
-
-            $id = TextHelper::textToMachineName($name);
-
-            $form['subscription_select']['contact_list_ids'][$id] = [
-              '#title' => $name,
-              '#type' => 'checkboxes',
-              '#multiple' => TRUE,
-              '#options' => $options,
-              '#default_value' => $this->configuration['contact_list_ids'],
-            ];
-          }
-        }
-        else {
-          $form['subscription_select']['contact_list_ids'] = [
-            '#markup' => $this->t('No contact lists.'),
-          ];
-        }
       }
     }
-    else {
-      $form['connections'] = [
-        '#markup' => $this->t('No connections.'),
+
+    if (!empty($active_connections)) {
+      $form['constant_contact']['subscription'] = [
+        '#title' => $this->t('Subscription'),
+        '#type' => 'radios',
+        '#default_value' => $this->configuration['subscription'],
+        '#options' => [
+          'dynamic' => $this->t('Subscribe users to dynamically created contact list from a single entity.'),
+          'select' => $this->t('Subscribe users to the selected contact lists.'),
+        ],
+        '#attributes' => [
+          'class' => [
+            'subscription-radios',
+          ],
+        ],
+        '#attached' => [
+          'library' => [
+            'constant_contact_mailout/constant_contact_mailout.subscribe_block',
+          ],
+        ],
+      ];
+
+      $form['constant_contact']['subscription_dynamic'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Dynamic Contact List Creation'),
+        '#open' => TRUE,
+        '#attributes' => [
+          'class' => [
+            'subscription-dynamic-details',
+          ],
+        ],
+      ];
+
+      $form['constant_contact']['subscription_dynamic']['connection_id'] = [
+        '#title' => 'Connection',
+        '#type' => 'select',
+        '#options' => $active_connections,
+        '#default_value' => $this->configuration['connection_id'],
+      ];
+
+      $form['constant_contact']['subscription_dynamic']['contact_list_prefix'] = [
+        '#title' => 'Contact List Prefix',
+        '#type' => 'textfield',
+        '#description' => $this->t('Add a prefix to contact list name for organization. Leave blank for no prefix.'),
+        '#default_value' => $this->configuration['contact_list_prefix'],
+      ];
+
+      $form['constant_contact']['subscription_select'] = [
+        '#type' => 'details',
+        '#title' => $this->t('Selected Contact Lists'),
+        '#description' => $this->t('Check contact lists to be displayed on the subscription form.'),
+        '#open' => TRUE,
+        '#attributes' => [
+          'class' => [
+            'subscription-select-details',
+          ],
+        ],
+      ];
+
+      if (!empty($contact_lists)) {
+        foreach ($contact_lists as $name => $lists) {
+          // Sort by value.
+          uasort($lists, function ($a, $b) {
+            return strcmp($a->__toString(), $b->__toString());
+          });
+
+          $form['constant_contact']['subscription_select']['contact_list_ids'][$id] = [
+            '#title' => $name,
+            '#type' => 'checkboxes',
+            '#multiple' => TRUE,
+            '#options' => $lists,
+            '#default_value' => $this->configuration['contact_list_ids'],
+          ];
+        }
+
+        $form['constant_contact']['subscription_select']['show_contact_lists'] = [
+          '#title' => $this->t('Show contact lists'),
+          '#type' => 'checkbox',
+          '#default_value' => $this->configuration['show_contact_lists'],
+          '#attributes' => [
+            'class' => [
+              'show-contact-lists',
+            ],
+          ],
+        ];
+
+        $form['constant_contact']['subscription_select']['show_select_all'] = [
+          '#title' => $this->t('Show select all'),
+          '#type' => 'checkbox',
+          '#default_value' => $this->configuration['show_select_all'],
+        ];
+
+        $form['constant_contact']['subscription_select']['group_contact_lists_label'] = [
+          '#title' => $this->t('List Label'),
+          '#description' => $this->t('If grouping contact lists is enabled, this list label will be used if the delimeter is not found.'),
+          '#type' => 'textfield',
+          '#default_value' => $this->configuration['group_contact_lists_label'],
+        ];
+
+        $form['constant_contact']['subscription_select']['group_contact_lists'] = [
+          '#title' => $this->t('Group contact lists by delimiter'),
+          '#type' => 'checkbox',
+          '#default_value' => $this->configuration['group_contact_lists'],
+        ];
+
+        $form['constant_contact']['subscription_select']['group_contact_lists_delimiter'] = [
+          '#title' => $this->t('Delimeter'),
+          '#type' => 'textfield',
+          '#default_value' => $this->configuration['group_contact_lists_delimiter'],
+        ];
+      }
+      else {
+        $form['constant_contact']['subscription_select']['contact_list_ids'] = [
+          '#markup' => $this->t('No contact lists.'),
+        ];
+      }
+
+      $form['constant_contact']['subscribed_message'] = [
+        '#type' => 'text_format',
+        '#title' => $this->t('Subscribed Message'),
+        '#default_value' => $this->configuration['subscribed_message'],
+      ];
+
+      $form['constant_contact']['unsubscribed_message'] = [
+        '#type' => 'text_format',
+        '#title' => $this->t('Unsubscribe'),
+        '#default_value' => $this->configuration['unsubscribed_message'],
       ];
     }
-
-    $form['group_contact_lists_label'] = [
-      '#title' => $this->t('List Label'),
-      '#description' => $this->t('If grouping contact lists is enabled, this list label will be used if the delimeter is not found.'),
-      '#type' => 'textfield',
-      '#default_value' => $this->configuration['group_contact_lists_label'],
-    ];
-
-    $form['group_contact_lists'] = [
-      '#title' => $this->t('Group contact lists by delimiter'),
-      '#type' => 'checkbox',
-      '#default_value' => $this->configuration['group_contact_lists'],
-    ];
-
-    $form['group_contact_lists_delimiter'] = [
-      '#title' => $this->t('Delimeter'),
-      '#type' => 'textfield',
-      '#default_value' => $this->configuration['group_contact_lists_delimiter'],
-    ];
-
-    // @todo If no delimeter found put in general group automatically
-    $form['success_message'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Success Message'),
-      '#default_value' => $this->configuration['success_message'],
-    ];
-
-    $form['unsubscribe'] = [
-      '#type' => 'text_format',
-      '#title' => $this->t('Unsubscribe'),
-      '#default_value' => $this->configuration['unsubscribe'],
-    ];
 
     return $form;
   }
@@ -232,35 +293,58 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
     parent::blockSubmit($form, $form_state);
 
     $values = $form_state->getValues();
+    $constant_contact_values = $values['constant_contact'];
 
-    // Filter contact_list_ids.
-    $contact_list_ids = [];
+    $this->configuration['fields'] = array_filter($constant_contact_values['fields']);
+    $this->configuration['description'] = $constant_contact_values['description']['value'];
+    $this->configuration['subscription'] = $constant_contact_values['subscription'];
 
-    if (!empty($values['subscription_select']['contact_list_ids'])) {
-      foreach ($values['subscription_select']['contact_list_ids'] as $lists) {
-        $contact_list_ids = array_merge($contact_list_ids, array_filter($lists));
+    if ($constant_contact_values['subscription'] == 'dynamic') {
+      $this->configuration['connection_id'] = $constant_contact_values['connection_id'];
+      $this->configuration['contact_list_prefix'] = $constant_contact_values['contact_list_prefix'];
+    }
+    elseif ($constant_contact_values['subscription'] == 'select') {
+      // Filter contact_list_ids.
+      $contact_list_ids = [];
+
+      if (!empty($constant_contact_values['subscription_select']['contact_list_ids'])) {
+        foreach ($constant_contact_values['subscription_select']['contact_list_ids'] as $lists) {
+          $contact_list_ids = array_merge($contact_list_ids, array_filter($lists));
+        }
       }
+
+      $this->configuration['contact_list_ids'] = $contact_list_ids;
+      $this->configuration['show_contact_lists'] = $constant_contact_values['subscription_select']['show_contact_lists'];
+      $this->configuration['show_select_all'] = $constant_contact_values['subscription_select']['show_select_all'];
+      $this->configuration['group_contact_lists_label'] = $constant_contact_values['subscription_select']['group_contact_lists_label'];
+      $this->configuration['group_contact_lists'] = $constant_contact_values['subscription_select']['group_contact_lists'];
+      $this->configuration['group_contact_lists_delimiter'] = $constant_contact_values['subscription_select']['group_contact_lists_delimiter'];
     }
 
-    $this->configuration['description'] = $values['description']['value'];
-    $this->configuration['subscription'] = $values['subscription'];
-    $this->configuration['contact_list_ids'] = $contact_list_ids;
-    $this->configuration['group_contact_lists_label'] = $values['group_contact_lists_label'];
-    $this->configuration['group_contact_lists'] = $values['group_contact_lists'];
-    $this->configuration['group_contact_lists_delimiter'] = $values['group_contact_lists_delimiter'];
-    $this->configuration['success_message'] = $values['success_message'];
-    $this->configuration['unsubscribe'] = $values['unsubscribe']['value'];
+    $this->configuration['subscribed_message'] = $constant_contact_values['subscribed_message']['value'];
+    $this->configuration['unsubscribed_message'] = $constant_contact_values['unsubscribed_message']['value'];
   }
 
   /**
    * {@inheritdoc}
    */
   public function build() {
-    $machine_name = $this->getMachineNameSuggestion();
+    $configuration = $this->configuration;
+
+    // Get block settings, include in configuration.
+    $blocks = Block::loadMultiple();
+    foreach ($blocks as $key => $block) {
+      $settings = $block->get('settings');
+
+      if ($settings['label'] == $this->configuration['label']) {
+        $configuration['settings'] = $settings;
+        $configuration['settings']['machine_name'] = $key;
+      }
+    }
 
     $build = [
       '#theme' => 'subscribe_block',
-      '#subscribe_block_form' => $this->formBuilder->getForm(SubscribeBlockForm::class, $machine_name, $this->configuration),
+      '#subscribe_block_form' => $this->formBuilder->getForm(SubscribeBlockForm::class, $configuration),
       '#data' => [
         'description' => $this->configuration['description'],
       ],

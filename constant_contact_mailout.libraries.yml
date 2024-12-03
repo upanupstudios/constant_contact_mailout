@@ -12,9 +12,17 @@ constant_contact_mailout_widget:
     - core/jquery
     - core/drupal
     - core/drupalSettings
-constant_contact_mailout_subscribe_block_form:
+constant_contact_mailout.subscribe_block:
   js:
-    js/constant_contact_mailout_subscribe_block_form.js: {}
+    js/subscribe_block.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/jquery.once
+constant_contact_mailout.subscribe_block_form:
+  js:
+    js/jquery.tmpl.min.js: {}
+    js/subscribe_block_form.js: {}
   dependencies:
     - core/drupal
     - core/jquery
