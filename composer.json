@@ -1,5 +1,5 @@
 {
-  "name": "drupal/constant_contact_mailout",
+  "name": "upanup/constant_contact_mailout",
   "description": "Adds a field type to send email notification to subscribers with Constant Contact.",
   "type": "drupal-module",
   "license": "GPL-2.0+",
