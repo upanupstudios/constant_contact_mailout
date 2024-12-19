@@ -638,7 +638,8 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                   $field_name = $definition->getName();
 
                   // Get value.
-                  $value = reset($entity->$field_name->getValue());
+                  $value = $entity->$field_name->getValue();
+                  $value = reset($value);
 
                   if (!empty($value['target_id'])) {
                     // Load entity.
@@ -661,7 +662,8 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                               $field_name = $_definition->getName();
 
                               // Get value.
-                              $value = reset($_entity->$field_name->getValue());
+                              $value = $_entity->$field_name->getValue();
+                              $value = reset($value);
 
                               if (empty($value['contact_list_id'])) {
                                 $connection_id = $_settings['connection_id'];
@@ -695,7 +697,6 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                                         if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
                                           // Save the contact list ID.
                                           $_entity->$field_name->value = $connection_id . ':' . $contact_list_response['list_id'];
-                                          var_dump($_entity->save());
 
                                           $message = $this->t('The contact list @name has been created.', [
                                             '@name' => $contact_list_response['name'],

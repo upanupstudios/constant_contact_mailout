@@ -4,6 +4,9 @@ Something wrong with this one when trying to connect or refresh
 Need to refresh token when expired somehow
 
 
+List is created on creation of an entity.
+List does not get deleted when an entity is deleted.
+
 
 // @todo Refresh connections and contact lists in cron.
 
