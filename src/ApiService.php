@@ -130,6 +130,9 @@ class ApiService implements ContainerInjectionInterface {
       $response = $this->getRefreshToken($connection['refresh_token'], $connection['api_key'], $connection['secret']);
 
       if (!empty($response) && !empty($response['access_token'])) {
+        $message = t('The access token has been refreshed');
+        $this->logger->notice($message);
+
         $connection['access_token'] = $response['access_token'];
         $connection['refresh_token'] = $response['refresh_token'];
         $connection['expires'] = time() + abs($response['expires_in']);
@@ -163,7 +166,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function getAllContactLists($connection, $params = []) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
     $httpClient = new Client();
     $constantContact = new ConstantContact($httpClient, $config);
@@ -176,7 +180,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function findByNameContactLists($connection, $title) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
     $httpClient = new Client();
     $constantContact = new ConstantContact($httpClient, $config);
@@ -189,7 +194,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function createContactList($connection, $contact_list_data) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
     $httpClient = new Client();
     $constantContact = new ConstantContact($httpClient, $config);
@@ -202,7 +208,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function createEmailCampaigns($connection, $email_campaign_data) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
 
     $httpClient = new Client();
@@ -216,7 +223,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function updateEmailCampaignActivities($connection, $campaign_activity_id, $email_campaign_acitivity_data) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
 
     // @todo Need to do some checking with refresh token and expiry.
@@ -231,7 +239,8 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function scheduleEmailCampaignActivities($connection, $campaign_activity_id, $schedule_data) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     $config = new Config($connection['access_token']);
 
     // @todo Need to do some checking with refresh token and expiry.
@@ -246,10 +255,10 @@ class ApiService implements ContainerInjectionInterface {
    */
   public function subscribe($connection, $contact_list_ids, $data) {
     // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
+    $connection = $this->refreshAccessToken($connection);
+
     // Contant Contact connection.
     $config = new Config($connection['access_token']);
-
     $httpClient = new Client();
     $constantContact = new ConstantContact($httpClient, $config);
 
@@ -268,11 +277,11 @@ class ApiService implements ContainerInjectionInterface {
       $subscribe_data['last_name'] = $data['last_name'];
     }
 
-    // @todo Check if we need to refresh?
+    // Signup.
     $contact_response = $constantContact->contacts()->signup($subscribe_data);
+    $level = 'status';
 
     if (!empty($contact_response) && !empty($contact_response['contact_id'])) {
-      // @todo Get contact lists?
       $message = t('The @email_address email is now subscribed', [
         '@email_address' => $data['email'],
       ]);
@@ -280,6 +289,7 @@ class ApiService implements ContainerInjectionInterface {
       $this->logger->notice($message);
     }
     else {
+      $level = 'error';
       $errors = $this->processErrorResponse($contact_response);
 
       $message = t('Constant Contact: Could not subscribe @email_address. @errors', [
@@ -290,7 +300,10 @@ class ApiService implements ContainerInjectionInterface {
       $this->logger->error($message);
     }
 
-    return $message;
+    return [
+      'level' => $level,
+      'message' => $message,
+    ];
   }
 
   /**

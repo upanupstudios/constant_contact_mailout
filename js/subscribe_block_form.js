@@ -1,5 +1,4 @@
-(function ($, Drupal, once)
-{
+(function ($, Drupal, once) {
   var initialized = false;
   var $subscribeBlockForm = null;
   var $test = false;
@@ -16,11 +15,11 @@
           $fieldset = $(this);
 
           if ($fieldset.find('input[value=all]').length != 0) {
-            $fieldset.find('input[value=all]').click(function() {
+            $fieldset.find('input[value=all]').click(function () {
               $fieldset.find('input[type=checkbox]').not('input[value=all]').prop('checked', $(this).is(':checked'));
             });
 
-            $fieldset.find('input[type=checkbox]').not('input[value=all]').click(function() {
+            $fieldset.find('input[type=checkbox]').not('input[value=all]').click(function () {
               $isAllChecked = $fieldset.find('input[type=checkbox]').not('input[value=all]').length == $fieldset.find('input[type=checkbox]:checked').not('input[value=all]').length;
               $fieldset.find('input[value=all]').prop('checked', $isAllChecked);
             });
@@ -61,7 +60,7 @@
         'confirm-email': 'Confirm Email'
       };
 
-      $.each(fields, function(index, value) {
+      $.each(fields, function (index, value) {
         if (formValid == true && $subscribeBlockForm.find('.' + index).length != 0) {
           $subscribeBlockForm.find('.' + index).parent().removeClass('form-item--error');
           $subscribeBlockForm.find('.' + index).removeClass('error');
@@ -97,7 +96,7 @@
       }
 
       // Checklist must be checked
-      if(formValid == true) {
+      if (formValid == true) {
         if ($subscribeBlockForm.find('.contact-list-ids input[type=checkbox]').not('.contact-list-ids input[value=all]').length > 0) {
           $subscribeBlockForm.find('.contact-list-ids').parent().removeClass('form-item--error');
           $subscribeBlockForm.find('.contact-list-ids').removeClass('error');
@@ -108,8 +107,8 @@
         }
       }
 
-      if(formValid == true) {
-        if(!(formValid = message == null)) {
+      if (formValid == true) {
+        if (!(formValid = message == null)) {
           displayMessage('error', Drupal.checkPlain(message));
         }
       }
@@ -118,10 +117,10 @@
     return formValid;
   }
 
-  function submitSubscribeBlockForm(message = null) {
+  function submitSubscribeBlockForm(message = null, level = null) {
     var formValid = validateSubscribeBlockForm();
 
-    if(formValid) {
+    if (formValid) {
       // Empty fields
       $subscribeBlockForm.find('.first-name').val("");
       $subscribeBlockForm.find('.last-name').val("");
@@ -132,7 +131,7 @@
       $subscribeBlockForm.find('.contact-list-ids input[type=checkbox]').prop('checked', false);
 
       if (message != null) {
-        displayMessage('status', Drupal.checkPlain(message));
+        displayMessage(level, Drupal.checkPlain(message));
       }
     }
   }
@@ -158,18 +157,17 @@
   }
 
   Drupal.behaviors.constantContactMailoutSubscribeBlockForm = {
-    attach: function(context, settings)
-    {
+    attach: function (context, settings) {
       init();
     },
   };
 
   // Argument passed from InvokeCommand.
-  $.fn.validateSubscribeBlockFormCallback = function(message) {
+  $.fn.validateSubscribeBlockFormCallback = function (message) {
     validateSubscribeBlockForm(message);
   };
 
-  $.fn.submitSubscribeBlockFormCallback = function(message) {
-    submitSubscribeBlockForm(message);
+  $.fn.submitSubscribeBlockFormCallback = function (message, level) {
+    submitSubscribeBlockForm(message, level);
   };
 })(jQuery, Drupal, once);

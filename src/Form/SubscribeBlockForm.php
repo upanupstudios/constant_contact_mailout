@@ -292,6 +292,7 @@ class SubscribeBlockForm extends FormBase {
     $block = Block::load($machine_name);
     $settings = NULL;
     $subscribed_message = NULL;
+    $message_level = 'status';
     $messages = [];
 
     if (!empty($block)) {
@@ -381,6 +382,7 @@ class SubscribeBlockForm extends FormBase {
                 }
                 else {
                   $errors = $this->api->processErrorResponse($contact_list_response);
+                  $message_level = 'error';
 
                   $message = $this->t('Constant Contact: @errors', [
                     '@errors' => implode('. ', $errors),
@@ -410,7 +412,6 @@ class SubscribeBlockForm extends FormBase {
           }
           else {
             // Get list from configuration.
-            // Should this be split?
             $contact_list_ids = $settings['contact_list_ids'];
           }
         }
@@ -427,8 +428,10 @@ class SubscribeBlockForm extends FormBase {
             $connection = $connections[$connection_id];
 
             if (!empty($connection) && !empty($contact_list_ids)) {
-              // @todo How to handle error?
-              $messages[] = $this->api->subscribe($connection, $contact_list_ids, $values);
+              $response = $this->api->subscribe($connection, $contact_list_ids, $values);
+
+              $message_level = $response['level'];
+              $messages[] = $response['message'];
             }
           }
 
@@ -436,11 +439,11 @@ class SubscribeBlockForm extends FormBase {
           $messages = array_filter($messages);
 
           if (!empty($messages) && empty($subscribed_message)) {
-            $subscribed_message = implode('. ', $messages) . '.';
+            $subscribed_message = implode('. ', $messages);
           }
 
           $ajaxResponse->addCommand(
-            new InvokeCommand(NULL, 'submitSubscribeBlockFormCallback', [$subscribed_message])
+            new InvokeCommand(NULL, 'submitSubscribeBlockFormCallback', [$subscribed_message, $message_level])
           );
         }
       }
