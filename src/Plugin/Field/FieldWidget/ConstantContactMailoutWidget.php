@@ -254,6 +254,9 @@ class ConstantContactMailoutWidget extends WidgetBase {
               }
             }
 
+            // Sort options by name.
+            asort($options);
+
             if (!empty($options)) {
               $id = TextHelper::textToMachineName($name);
 
