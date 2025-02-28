@@ -126,6 +126,8 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
         '#title' => t('Email subject'),
         '#default_value' => $this->getSetting('subject'),
         '#description' => $this->t('This field supports tokens.'),
+        '#token_types' => ['node'],
+        '#element_validate' => ['token_element_validate'],
         '#required' => TRUE,
       ];
 
@@ -560,7 +562,6 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
           $connection = $connections[$connection_id];
 
           if (!empty($connection)) {
-
             // Get entity title.
             $title = $entity->getTitle();
 
@@ -974,41 +975,47 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
   /**
    * {@inheritdoc}
    */
-  public function prepareContent($content) {
-    if (is_string($content)) {
-      // Get current schema and host.
+  public function prepareRenderedTemplate($rendered_template) {
+    // Get settings.
+    $settings = \Drupal::config('constant_contact_mailout.settings');
+    $default_base_url = $settings->get('default_base_url');
+    //rewrite host, add base domain setting
+    if($default_base_url != ''){
+      $scheme_and_host = $default_base_url;
+    }
+    else{
       $scheme_and_host = \Drupal::request()->getSchemeAndHttpHost();
+    }
+    http://crd273.upanupstudios.local/news/test-news
+    // Rewrite relative urls with current scheme and domain in links.
+    preg_match_all('#<a\s.*?(?:href=[\'"](.*?)[\'"]).*?>#is', $rendered_template, $matches);
 
-      // Rewrite relative urls with current scheme and domain in links.
-      preg_match_all('#<a\s.*?(?:href=[\'"](.*?)[\'"]).*?>#is', $content, $matches);
+    if (!empty($matches)) {
+      // Filter and make unique.
+      $matches[1] = array_filter(array_unique($matches[1]));
 
-      if (!empty($matches)) {
-        // Filter and make unique.
-        $matches[1] = array_filter(array_unique($matches[1]));
-
-        foreach ($matches[1] as $match) {
-          if (preg_match("/^\//", $match)) {
-            $content = str_replace($match, $scheme_and_host . $match, $content);
-          }
-        }
-      }
-
-      // Rewrite relative url with current scheme and domain in images.
-      preg_match_all('#<img\s.*?(?:src=[\'"](.*?)[\'"]).*?/>#is', $content, $matches);
-
-      if (!empty($matches)) {
-        // Filter and make unique.
-        $matches[1] = array_filter(array_unique($matches[1]));
-
-        foreach ($matches[1] as $match) {
-          if (preg_match("/^\//", $match)) {
-            $content = str_replace($match, $scheme_and_host . $match, $content);
-          }
+      foreach ($matches[1] as $match) {
+        if (preg_match("/^\//", $match)) {
+          $rendered_template = str_replace($match, $scheme_and_host . $match, $rendered_template);
         }
       }
     }
 
-    return $content;
+    // Rewrite relative url with current scheme and domain in images.
+    preg_match_all('#<img\s.*?(?:src=[\'"](.*?)[\'"]).*?/>#is', $rendered_template, $matches);
+
+    if (!empty($matches)) {
+      // Filter and make unique.
+      $matches[1] = array_filter(array_unique($matches[1]));
+
+      foreach ($matches[1] as $match) {
+        if (preg_match("/^\//", $match)) {
+          $rendered_template = str_replace($match, $scheme_and_host . $match, $rendered_template);
+        }
+      }
+    }
+
+    return $rendered_template;
   }
 
   /**
@@ -1048,11 +1055,6 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       }
     }
 
-    // Prepare body content.
-    if (!empty($entity->body)) {
-      $entity->body->value = $this->prepareContent($entity->body->value);
-    }
-
     // Get theme variables (settings)
     $theme_settings = \Drupal::config($theme_name . '.settings')->get();
 
@@ -1078,6 +1080,9 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     // Render template.
     $render = \Drupal::service('renderer')->render($template);
 
+    // Prepare rendered template.
+    $render = $this->prepareRenderedTemplate($render);
+
     // Restore active theme.
     \Drupal::theme()->setActiveTheme($active_theme);
 
@@ -1096,10 +1101,14 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     // Get entity properties.
     $title = $entity->getTitle();
     $type = $entity->type->entity->label();
-
-    // @todo Refesh access_token
     // Get email subject.
+    // Refesh token
     $subject = $this->getSetting('subject');
+    if (!empty($subject)) {
+      $subject = \Drupal::token()->replace($subject, [
+        'node' => $entity,
+      ]);
+    }
 
     if (empty($subject)) {
       // Set default subject if empty (string)
@@ -1182,8 +1191,9 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
           elseif (!empty($this->sendlater) && !empty($this->sendlater_datetime)) {
             $datetime = new \DateTime($this->sendlater_datetime['object']->__toString());
 
+            // Use ISO-8601 format.
             $schedule_data = [
-              'scheduled_date' => $datetime->format('Y-m-dTH:i:sZ'),
+              'scheduled_date' => $datetime->format('c'),
             ];
 
             $message = 'The "@subject" will be sent on @date to @contact_list_names contact lists.';

@@ -154,14 +154,17 @@ class SubscribeBlockForm extends FormBase {
         if (!empty($contact_lists)) {
           // Add select all before the contact lists groups if more than 1.
           if (count($contact_lists) > 1) {
-            $form['contact_list_ids-all'] = [
-              '#type' => 'checkboxes',
-              '#options' => ['all' => $this->t('Select all')],
-              '#attributes' => [
-                'class' => ['contact-list-ids-all'],
-                'novalidate' => 'novalidate',
-              ],
-            ];
+            // Show if enabled.
+            if (!empty($settings['show_select_all'])) {
+              $form['contact_list_ids-all'] = [
+                '#type' => 'checkboxes',
+                '#options' => ['all' => $this->t('Select all')],
+                '#attributes' => [
+                  'class' => ['contact-list-ids-all'],
+                  'novalidate' => 'novalidate',
+                ],
+              ];
+            }
           }
 
           // Sort group.
@@ -292,7 +295,6 @@ class SubscribeBlockForm extends FormBase {
     $block = Block::load($machine_name);
     $settings = NULL;
     $subscribed_message = NULL;
-    $message_level = 'status';
     $messages = [];
 
     if (!empty($block)) {
@@ -382,7 +384,6 @@ class SubscribeBlockForm extends FormBase {
                 }
                 else {
                   $errors = $this->api->processErrorResponse($contact_list_response);
-                  $message_level = 'error';
 
                   $message = $this->t('Constant Contact: @errors', [
                     '@errors' => implode('. ', $errors),
@@ -412,6 +413,7 @@ class SubscribeBlockForm extends FormBase {
           }
           else {
             // Get list from configuration.
+            // Should this be split?
             $contact_list_ids = $settings['contact_list_ids'];
           }
         }
@@ -428,10 +430,8 @@ class SubscribeBlockForm extends FormBase {
             $connection = $connections[$connection_id];
 
             if (!empty($connection) && !empty($contact_list_ids)) {
-              $response = $this->api->subscribe($connection, $contact_list_ids, $values);
-
-              $message_level = $response['level'];
-              $messages[] = $response['message'];
+              // @todo How to handle error?
+              $messages[] = $this->api->subscribe($connection, $contact_list_ids, $values);
             }
           }
 
@@ -439,11 +439,11 @@ class SubscribeBlockForm extends FormBase {
           $messages = array_filter($messages);
 
           if (!empty($messages) && empty($subscribed_message)) {
-            $subscribed_message = implode('. ', $messages);
+            $subscribed_message = implode('. ', $messages) . '.';
           }
 
           $ajaxResponse->addCommand(
-            new InvokeCommand(NULL, 'submitSubscribeBlockFormCallback', [$subscribed_message, $message_level])
+            new InvokeCommand(NULL, 'submitSubscribeBlockFormCallback', [$subscribed_message])
           );
         }
       }

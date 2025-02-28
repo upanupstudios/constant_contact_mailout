@@ -333,11 +333,11 @@ class ConstantContactMailoutWidget extends WidgetBase {
         $datetime = $sendlater_datetime['object'];
 
         if ($datetime < $now) {
-          $form_state->setError($element, $this->t("Schedule must be set in the future."));
+          $form_state->setError($element, t("Schedule must be set in the future."));
         }
       }
       else {
-        $form_state->setError($element, $this->t("Enter scheduled date and time."));
+        $form_state->setError($element, t("Enter scheduled date and time."));
       }
     }
   }

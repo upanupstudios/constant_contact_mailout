@@ -85,6 +85,19 @@ class AdminSettingsForm extends ConfigFormBase {
     $connections = $settings->get('connections');
     $debug_render_template = $settings->get('debug_render_template');
     $debug_sendto_contact_list = $settings->get('debug_sendto_contact_list');
+    $default_base_url = $settings->get('default_base_url');
+
+    $form['settings'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Settings'),
+      '#open' => (!empty($default_base_url)),
+    ];
+    
+    $form['settings']['default_base_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Default base URL'),
+      '#default_value' => !empty($default_base_url) ? $default_base_url : NULL,
+    ];
 
     $form['debug'] = [
       '#type' => 'details',
@@ -133,6 +146,7 @@ class AdminSettingsForm extends ConfigFormBase {
     $this->config('constant_contact_mailout.settings')
       ->set('debug_render_template', $form_state->getValue('debug_render_template'))
       ->set('debug_sendto_contact_list', $form_state->getValue('debug_sendto_contact_list'))
+      ->set('default_base_url', $form_state->getValue('default_base_url'))
       ->save();
 
     return parent::submitForm($form, $form_state);
