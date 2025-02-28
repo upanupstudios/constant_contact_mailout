@@ -646,72 +646,74 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                     // Load entity.
                     $_entity = \Drupal::entityTypeManager()->getStorage($settings['target_type'])->load($value['target_id']);
 
-                    // Get fields.
-                    $_definitions = $_entity->getFieldDefinitions();
+                    if (!empty($_entity)) {
+                      // Get fields.
+                      $_definitions = $_entity->getFieldDefinitions();
 
-                    if (!empty($_definitions)) {
-                      foreach ($_definitions as $_definition) {
-                        if ($_definition instanceof FieldConfigInterface) {
-                          $fieldType = $_definition->getFieldStorageDefinition()->getType();
+                      if (!empty($_definitions)) {
+                        foreach ($_definitions as $_definition) {
+                          if ($_definition instanceof FieldConfigInterface) {
+                            $fieldType = $_definition->getFieldStorageDefinition()->getType();
 
-                          if ($fieldType == 'constant_contact_mailout') {
-                            $_settings = $_definition->getSettings();
+                            if ($fieldType == 'constant_contact_mailout') {
+                              $_settings = $_definition->getSettings();
 
-                            // @todo Check if there's stored value?
-                            if (!empty($_settings['contact_list_creation']) && $_settings['contact_list_creation'] == 'dynamic') {
-                              // Get field machine name.
-                              $field_name = $_definition->getName();
+                              // @todo Check if there's stored value?
+                              if (!empty($_settings['contact_list_creation']) && $_settings['contact_list_creation'] == 'dynamic') {
+                                // Get field machine name.
+                                $field_name = $_definition->getName();
 
-                              // Get value.
-                              $value = $_entity->$field_name->getValue();
-                              $value = reset($value);
+                                // Get value.
+                                $value = $_entity->$field_name->getValue();
+                                $value = reset($value);
 
-                              if (empty($value['contact_list_id'])) {
-                                $connection_id = $_settings['connection_id'];
-                                $contact_list_prefix = $_settings['contact_list_prefix'];
+                                if (empty($value['contact_list_id'])) {
+                                  $connection_id = $_settings['connection_id'];
+                                  $contact_list_prefix = $_settings['contact_list_prefix'];
 
-                                if (!empty($connections) && !empty($connections[$connection_id])) {
-                                  // Get connection.
-                                  $connection = $connections[$connection_id];
+                                  if (!empty($connections) && !empty($connections[$connection_id])) {
+                                    // Get connection.
+                                    $connection = $connections[$connection_id];
 
-                                  if (!empty($connection)) {
-                                    // Get entity title.
-                                    $title = $_entity->getTitle();
+                                    if (!empty($connection)) {
+                                      // Get entity title.
+                                      $title = $_entity->getTitle();
 
-                                    if (!empty($contact_list_prefix)) {
-                                      $title = $contact_list_prefix . $title;
-                                    }
-
-                                    if (!empty($title)) {
-                                      // Find contact list by title.
-                                      $contact_list = $api->findByNameContactLists($connection, $title);
-
-                                      // There is no contact list found.
-                                      if (empty($contact_list)) {
-                                        // Create the contact list using the title.
-                                        $contact_list_data = [
-                                          'name' => $title,
-                                        ];
-
-                                        $contact_list_response = $api->createContactList($connection, $contact_list_data);
-
-                                        if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
-                                          // Save the contact list ID.
-                                          $_entity->$field_name->value = $connection_id . ':' . $contact_list_response['list_id'];
-
-                                          $message = $this->t('The contact list @name has been created.', [
-                                            '@name' => $contact_list_response['name'],
-                                          ]);
-
-                                          \Drupal::logger('constant_contact_mailout')->notice($message);
-                                          \Drupal::messenger()->addMessage($message, 'status', FALSE);
-                                        }
+                                      if (!empty($contact_list_prefix)) {
+                                        $title = $contact_list_prefix . $title;
                                       }
-                                      else {
-                                        if (!empty($contact_list['list_id'])) {
-                                          // Save the contact list ID.
-                                          $_entity->$field_name->value = $connection_id . ':' . $contact_list['list_id'];
-                                          $_entity->save();
+
+                                      if (!empty($title)) {
+                                        // Find contact list by title.
+                                        $contact_list = $api->findByNameContactLists($connection, $title);
+
+                                        // There is no contact list found.
+                                        if (empty($contact_list)) {
+                                          // Create the contact list using the title.
+                                          $contact_list_data = [
+                                            'name' => $title,
+                                          ];
+
+                                          $contact_list_response = $api->createContactList($connection, $contact_list_data);
+
+                                          if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
+                                            // Save the contact list ID.
+                                            $_entity->$field_name->value = $connection_id . ':' . $contact_list_response['list_id'];
+
+                                            $message = $this->t('The contact list @name has been created.', [
+                                              '@name' => $contact_list_response['name'],
+                                            ]);
+
+                                            \Drupal::logger('constant_contact_mailout')->notice($message);
+                                            \Drupal::messenger()->addMessage($message, 'status', FALSE);
+                                          }
+                                        }
+                                        else {
+                                          if (!empty($contact_list['list_id'])) {
+                                            // Save the contact list ID.
+                                            $_entity->$field_name->value = $connection_id . ':' . $contact_list['list_id'];
+                                            $_entity->save();
+                                          }
                                         }
                                       }
                                     }
