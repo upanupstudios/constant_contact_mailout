@@ -279,13 +279,13 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
       }
 
       $form['constant_contact']['subscribed_message'] = [
-        '#type' => 'text_format',
+        '#type' => 'processed_text',
         '#title' => $this->t('Subscribed Message'),
         '#default_value' => $this->configuration['subscribed_message'],
       ];
 
       $form['constant_contact']['unsubscribed_message'] = [
-        '#type' => 'text_format',
+        '#type' => 'processed_text',
         '#title' => $this->t('Unsubscribe'),
         '#default_value' => $this->configuration['unsubscribed_message'],
       ];
