@@ -94,6 +94,7 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
       'group_contact_lists_label' => $this->t('General'),
       'group_contact_lists' => FALSE,
       'group_contact_lists_delimiter' => NULL,
+      'group_contact_lists_order' => NULL,
       'subscribed_message' => NULL,
       'unsubscribed_message' => NULL,
     ];
@@ -263,6 +264,13 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
           '#type' => 'textfield',
           '#default_value' => $this->configuration['group_contact_lists_delimiter'],
         ];
+
+        $form['constant_contact']['subscription_select']['group_contact_lists_order'] = [
+          '#title' => $this->t('Group Order'),
+          '#type' => 'textarea',
+          '#default_value' => $this->configuration['group_contact_lists_order'],
+          '#description' => $this->t('Enter the custom group order name.'),
+        ];
       }
       else {
         $form['constant_contact']['subscription_select']['contact_list_ids'] = [
@@ -319,6 +327,7 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
       $this->configuration['group_contact_lists_label'] = $constant_contact_values['subscription_select']['group_contact_lists_label'];
       $this->configuration['group_contact_lists'] = $constant_contact_values['subscription_select']['group_contact_lists'];
       $this->configuration['group_contact_lists_delimiter'] = $constant_contact_values['subscription_select']['group_contact_lists_delimiter'];
+      $this->configuration['group_contact_lists_order'] = $constant_contact_values['subscription_select']['group_contact_lists_order'];
     }
 
     $this->configuration['subscribed_message'] = $constant_contact_values['subscribed_message']['value'];

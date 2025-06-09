@@ -180,17 +180,34 @@ class ConstantContactMailoutWidget extends WidgetBase {
                                   $settings = $_definition->getSettings();
 
                                   // Must be set as dynamic, what if select?
-                                  if (!empty($settings['contact_list_creation']) && $settings['contact_list_creation'] == 'dynamic') {
+                                  if (!empty($settings['contact_list_creation'])) {
                                     $field_name = $_definition->getName();
                                     $value = $_entity->$field_name->getValue();
+
+                                    // Get first value.
                                     $value = reset($value);
 
-                                    if (!empty($value['contact_list_id'])) {
-                                      if (!empty($contact_lists)) {
-                                        foreach ($contact_lists as $name => $lists) {
-                                          foreach ($lists as $contact_list_id => $contact_list_name) {
-                                            if ($value['contact_list_id'] == $contact_list_id) {
-                                              $contact_list_names[] = $contact_list_name->__toString();
+                                    if ($settings['contact_list_creation'] == 'dynamic') {
+                                      if (!empty($value['contact_list_id'])) {
+                                        if (!empty($contact_lists)) {
+                                          foreach ($contact_lists as $name => $lists) {
+                                            foreach ($lists as $contact_list_id => $contact_list_name) {
+                                              if ($value['contact_list_id'] == $contact_list_id) {
+                                                $contact_list_names[] = $contact_list_name->__toString();
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                    elseif ($settings['contact_list_creation'] == 'select') {
+                                      if (!empty($settings['contact_list_ids'])) {
+                                        if (!empty($contact_lists)) {
+                                          foreach ($contact_lists as $name => $lists) {
+                                            foreach ($lists as $contact_list_id => $contact_list_name) {
+                                              if (in_array($contact_list_id, $settings['contact_list_ids'])) {
+                                                $contact_list_names[] = $contact_list_name->__toString();
+                                              }
                                             }
                                           }
                                         }

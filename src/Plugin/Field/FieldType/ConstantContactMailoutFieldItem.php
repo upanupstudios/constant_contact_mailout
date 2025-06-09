@@ -35,7 +35,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
    */
   public static function defaultFieldSettings() {
     return [
-      'subject' => '@title',
+      'subject' => '[node:title]',
       'contact_list_creation' => 'select',
       'connection_id' => NULL,
       'contact_list_prefix' => NULL,
@@ -776,7 +776,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
           $contact_list_ids = [$contact_list_id];
 
           if (!empty($connection)) {
-            $this->sendMailout($connection, $contact_list_ids, $entity, $template, $debug_render_template);
+            $this->sendMailout($connection, $contact_list_ids, $entity, $template);
           }
         }
         else {
@@ -791,7 +791,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
               $contact_list_ids = [$contact_list_id];
 
               if (!empty($connection)) {
-                $this->sendMailout($connection, $contact_list_ids, $entity, $template, $debug_render_template);
+                $this->sendMailout($connection, $contact_list_ids, $entity, $template);
               }
             }
             else {
@@ -836,7 +836,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                 }
 
                 if (!empty($connection) && !empty($contact_list_ids)) {
-                  $this->sendMailout($connection, $contact_list_ids, $entity, $template, $debug_render_template);
+                  $this->sendMailout($connection, $contact_list_ids, $entity, $template);
                 }
               }
             }
@@ -910,7 +910,8 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                       $field_name = $definition->getName();
 
                       // Get value.
-                      $value = reset($entity->$field_name->getValue());
+                      $value = $entity->$field_name->getValue();
+                      $value = reset($value);
 
                       if (!empty($value['target_id'])) {
                         // Load entity.
@@ -924,28 +925,48 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                               $fieldType = $_definition->getFieldStorageDefinition()->getType();
 
                               if ($fieldType == 'constant_contact_mailout') {
-                                $_settings = $_definition->getSettings();
+                                $settings = $_definition->getSettings();
 
                                 // Must be set as dynamic.
-                                // @todo could it be also selected?
-                                if (!empty($_settings['contact_list_creation']) && $_settings['contact_list_creation'] == 'dynamic') {
-                                  // Get field machine name.
+                                if (!empty($settings['contact_list_creation'])) {
                                   $field_name = $_definition->getName();
+                                  $value = $_entity->$field_name->getValue();
+                                  $value = reset($value);
 
-                                  // Get value.
-                                  $value = reset($_entity->$field_name->getValue());
+                                  if ($settings['contact_list_creation'] == 'dynamic') {
+                                    if (!empty($value['contact_list_id'])) {
+                                      [$connection_id, $contact_list_id] = explode(':', $value['contact_list_id']);
 
-                                  if (!empty($value['contact_list_id'])) {
-                                    [$connection_id, $contact_list_id] = explode(':', $value['contact_list_id']);
+                                      if (!empty($connections[$connection_id])) {
+                                        $connection = $connections[$connection_id];
+                                      }
 
-                                    if (!empty($connections[$connection_id])) {
-                                      $connection = $connections[$connection_id];
+                                      $contact_list_ids = [$contact_list_id];
+
+                                      if (!empty($connection)) {
+                                        $this->sendMailout($connection, $contact_list_ids, $entity, $template);
+                                      }
                                     }
+                                  }
+                                  elseif ($settings['contact_list_creation'] == 'select') {
+                                    if (!empty($settings['contact_list_ids'])) {
+                                      foreach ($settings['contact_list_ids'] as $contact_list_id) {
+                                        [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
+                                        $connection_contact_lists[$connection_id][] = $contact_list_id;
+                                      }
 
-                                    $contact_list_ids = [$contact_list_id];
+                                      if (!empty($connection_contact_lists)) {
+                                        foreach ($connection_contact_lists as $connection_id => $contact_list_ids) {
+                                          if (!empty($connections[$connection_id])) {
+                                            $connection = $connections[$connection_id];
+                                          }
+                                          $contact_list_ids = array_unique($contact_list_ids);
 
-                                    if (!empty($connection)) {
-                                      $this->sendMailout($connection, $contact_list_ids, $entity, $template, $debug_render_template);
+                                          if (!empty($connection) && !empty($contact_list_ids)) {
+                                            $this->sendMailout($connection, $contact_list_ids, $entity, $template);
+                                          }
+                                        }
+                                      }
                                     }
                                   }
                                 }
@@ -981,14 +1002,15 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     // Get settings.
     $settings = \Drupal::config('constant_contact_mailout.settings');
     $default_base_url = $settings->get('default_base_url');
-    //rewrite host, add base domain setting
-    if($default_base_url != ''){
+    // Rewrite host, add base domain setting.
+    if ($default_base_url != '') {
       $scheme_and_host = $default_base_url;
     }
-    else{
+    else {
       $scheme_and_host = \Drupal::request()->getSchemeAndHttpHost();
     }
-    http://crd273.upanupstudios.local/news/test-news
+    // crd273.upanupstudios.local/news/test-news.
+    http:
     // Rewrite relative urls with current scheme and domain in links.
     preg_match_all('#<a\s.*?(?:href=[\'"](.*?)[\'"]).*?>#is', $rendered_template, $matches);
 
@@ -1103,9 +1125,10 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     // Get entity properties.
     $title = $entity->getTitle();
     $type = $entity->type->entity->label();
+
     // Get email subject.
-    // Refesh token
     $subject = $this->getSetting('subject');
+
     if (!empty($subject)) {
       $subject = \Drupal::token()->replace($subject, [
         'node' => $entity,

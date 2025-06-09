@@ -170,6 +170,19 @@ class SubscribeBlockForm extends FormBase {
           // Sort group.
           ksort($contact_lists);
 
+          if (!empty($settings['group_contact_lists_order'])) {
+            $_contact_lists = [];
+            $groups = explode("\r\n", $settings['group_contact_lists_order']);
+
+            foreach ($groups as $group) {
+              if (array_key_exists($group, $contact_lists)) {
+                $_contact_lists[$group] = $contact_lists[$group];
+              }
+            }
+
+            $contact_lists = $_contact_lists;
+          }
+
           foreach ($contact_lists as $group => $list) {
             // @todo Move "other" to bottom of list?
             // Sort lists.
