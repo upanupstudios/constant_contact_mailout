@@ -821,9 +821,13 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
               // Get contact list ids from selection.
               if (!empty($this->values['contact_list_ids'])) {
                 foreach ($this->values['contact_list_ids'] as $connection_id => $contact_list_ids) {
-                  foreach ($contact_list_ids as $contact_list_id) {
-                    [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
-                    $connection_contact_lists[$connection_id][] = $contact_list_id;
+                  if (!empty($contact_list_ids)) {
+                    foreach ($contact_list_ids as $contact_list_id) {
+                      if (!empty($contact_list_id)) {
+                        [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
+                        $connection_contact_lists[$connection_id][] = $contact_list_id;
+                      }
+                    }
                   }
                 }
               }
@@ -866,9 +870,13 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                         foreach ($values as $value) {
                           if (!empty($value['target_id']) && !empty($terms[$value['target_id']])) {
                             foreach ($terms[$value['target_id']] as $connection_id => $contact_list_ids) {
-                              foreach ($contact_list_ids as $contact_list_id) {
-                                [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
-                                $connection_contact_lists[$connection_id][] = $contact_list_id;
+                              if (!empty($contact_list_ids)) {
+                                foreach ($contact_list_ids as $contact_list_id) {
+                                  if (!empty($contact_list_id)) {
+                                    [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
+                                    $connection_contact_lists[$connection_id][] = $contact_list_id;
+                                  }
+                                }
                               }
                             }
 
@@ -951,8 +959,10 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                                   elseif ($settings['contact_list_creation'] == 'select') {
                                     if (!empty($settings['contact_list_ids'])) {
                                       foreach ($settings['contact_list_ids'] as $contact_list_id) {
-                                        [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
-                                        $connection_contact_lists[$connection_id][] = $contact_list_id;
+                                        if (!empty($contact_list_id)) {
+                                          [$connection_id, $contact_list_id] = explode(':', $contact_list_id);
+                                          $connection_contact_lists[$connection_id][] = $contact_list_id;
+                                        }
                                       }
 
                                       if (!empty($connection_contact_lists)) {
