@@ -43,7 +43,6 @@
         $subscribeBlockForm.find('#edit-email').val('marcom@upanup.com');
         $subscribeBlockForm.find('#edit-confirm-email').val('marcom@upanup.com');
 
-        displayMessage('error', 'Confirm Email must match Email.', '.confirm-email');
         // submitSubscribeBlockForm();
       }
 
@@ -147,9 +146,10 @@
   }
 
   function displayMessage(type, message, selector) {
+    // Decodes entities in message.
     var $message = {
       type: type,
-      message: message
+      message: $("<div>").html(message).text(),
     };
 
     // Add error message
