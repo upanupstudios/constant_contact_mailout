@@ -2,6 +2,7 @@
 
 namespace Drupal\constant_contact_mailout\Form;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\LoggerChannel;
@@ -36,6 +37,20 @@ class AdminSettingsForm extends ConfigFormBase {
   protected $logger;
 
   /**
+   * The config factory interface.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
+   * The config instance.
+   *
+   * @var \Drupal\Core\Config\ImmutableConfig
+   */
+  protected $settings;
+
+  /**
    * Constructs a new AdminSettingsForm object.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
@@ -45,10 +60,14 @@ class AdminSettingsForm extends ConfigFormBase {
    * @param \Drupal\Core\Logger\LoggerChannel $logger
    *   The logger channel factory.
    */
-  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannel $logger) {
+  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannel $logger, ConfigFactoryInterface $config_factory) {
     $this->request = $request;
     $this->messenger = $messenger;
     $this->logger = $logger;
+    $this->configFactory = $config_factory;
+
+    // Get settings.
+    $this->settings = $this->configFactory->get('constant_contact_mailout.settings');
   }
 
   /**
@@ -58,7 +77,8 @@ class AdminSettingsForm extends ConfigFormBase {
     return new static(
       $container->get('request_stack')->getCurrentRequest(),
       $container->get('messenger'),
-      $container->get('logger.factory')->get('constant_contact_mailout')
+      $container->get('logger.factory')->get('constant_contact_mailout'),
+      $container->get('config.factory')
     );
   }
 
@@ -80,19 +100,17 @@ class AdminSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $settings = $this->config('constant_contact_mailout.settings');
-
-    $connections = $settings->get('connections');
-    $debug_render_template = $settings->get('debug_render_template');
-    $debug_sendto_contact_list = $settings->get('debug_sendto_contact_list');
-    $default_base_url = $settings->get('default_base_url');
+    $connections = $this->settings->get('connections');
+    $debug_render_template = $this->settings->get('debug_render_template');
+    $debug_sendto_contact_list = $this->settings->get('debug_sendto_contact_list');
+    $default_base_url = $this->settings->get('default_base_url');
 
     $form['settings'] = [
       '#type' => 'details',
       '#title' => $this->t('Settings'),
       '#open' => (!empty($default_base_url)),
     ];
-    
+
     $form['settings']['default_base_url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Default base URL'),
