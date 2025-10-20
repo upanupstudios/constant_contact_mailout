@@ -13,7 +13,7 @@ use Upanupstudios\ConstantContact\Php\Client\Config;
 use Upanupstudios\ConstantContact\Php\Client\ConstantContact;
 
 /**
- * Defines a service provider for Constant Contact.
+ * The ApiService class.
  */
 class ApiService implements ContainerInjectionInterface {
 
