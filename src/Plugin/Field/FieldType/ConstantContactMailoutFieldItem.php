@@ -1019,8 +1019,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     else {
       $scheme_and_host = \Drupal::request()->getSchemeAndHttpHost();
     }
-    // crd273.upanupstudios.local/news/test-news.
-    http:
+
     // Rewrite relative urls with current scheme and domain in links.
     preg_match_all('#<a\s.*?(?:href=[\'"](.*?)[\'"]).*?>#is', $rendered_template, $matches);
 
@@ -1263,6 +1262,10 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
             \Drupal::messenger()->addStatus($message);
           }
           else {
+            // Additional message for clarity.
+            $message = $this->t('Constant Contact: Unable to schedule the email campaign activity.');
+            \Drupal::logger('constant_contact_mailout')->error($message);
+
             $errors = $api->processErrorResponse($email_campaign_activity_schedule_response);
 
             $message = $this->t('Constant Contact: @errors', [
@@ -1274,6 +1277,10 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
           }
         }
         else {
+          // Additional message for clarity.
+          $message = $this->t('Constant Contact: Unable to update the email campaign activity.');
+          \Drupal::logger('constant_contact_mailout')->error($message);
+
           $errors = $api->processErrorResponse($email_campaign_activity_response);
 
           $message = $this->t('Constant Contact: @errors', [
@@ -1285,6 +1292,9 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
         }
       }
       else {
+        // Additional message for clarity.
+        $message = $this->t('Constant Contact: Unable to create the email campaign.');
+
         $errors = $api->processErrorResponse($email_campaign_response);
 
         $message = t('Constant Contact: @errors', [
