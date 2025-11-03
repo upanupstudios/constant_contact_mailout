@@ -1266,6 +1266,12 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
             $message = $this->t('Constant Contact: Unable to schedule the email campaign activity.');
             \Drupal::logger('constant_contact_mailout')->error($message);
 
+            // Return actual response for debugging.
+            $message = $this->t('Constant Contact: @errors', [
+              '@errors' => print_r($email_campaign_activity_schedule_response, TRUE),
+            ]);
+            \Drupal::logger('constant_contact_mailout')->error($message);
+
             $errors = $api->processErrorResponse($email_campaign_activity_schedule_response);
 
             $message = $this->t('Constant Contact: @errors', [
@@ -1294,6 +1300,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       else {
         // Additional message for clarity.
         $message = $this->t('Constant Contact: Unable to create the email campaign.');
+        \Drupal::logger('constant_contact_mailout')->error($message);
 
         $errors = $api->processErrorResponse($email_campaign_response);
 

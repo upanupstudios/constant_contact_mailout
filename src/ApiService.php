@@ -389,6 +389,16 @@ class ApiService implements ContainerInjectionInterface {
           $this->messenger->addStatus($message);
         }
         else {
+          // Additional message for clarity.
+          $message = t('Constant Contact: Unable to schedule the email campaign activity.');
+          $this->logger->error($message);
+
+          // Return actual response for debugging.
+          $message = t('Constant Contact: @errors', [
+            '@errors' => print_r($email_campaign_activity_schedule_response, TRUE),
+          ]);
+          $this->logger->error($message);
+
           $errors = $this->processErrorResponse($email_campaign_activity_schedule_response);
 
           $message = t('@errors', [
@@ -400,6 +410,10 @@ class ApiService implements ContainerInjectionInterface {
         }
       }
       else {
+        // Additional message for clarity.
+        $message = t('Constant Contact: Unable to update the email campaign activity.');
+        $this->logger->error($message);
+
         $errors = $this->processErrorResponse($email_campaign_activity_response);
 
         $message = t('@errors', [
@@ -411,6 +425,10 @@ class ApiService implements ContainerInjectionInterface {
       }
     }
     else {
+      // Additional message for clarity.
+      $message = t('Constant Contact: Unable to create the email campaign.');
+      $this->logger->error($message);
+
       $errors = $this->processErrorResponse($email_campaign_response);
 
       $message = t('@errors', [
