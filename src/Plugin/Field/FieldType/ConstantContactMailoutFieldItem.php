@@ -511,7 +511,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       $form_state->setValue(['settings', 'terms'], $terms);
     }
     else {
-      $form_state->setValue(['settings', 'vocabularies'], NULL);
+      $form_state->setValue(['settings', 'vocabularies'], []);
       $form_state->setValue(['settings', 'terms'], []);
     }
 
@@ -548,171 +548,174 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
 
     // Get entity.
     $entity = $this->getEntity();
+    $isPublished = $entity->isPublished();
 
-    // Dynamic - Create contact list using node title.
-    if ($contact_list_creation == 'dynamic') {
-      // There is no contact list stored.
-      // Need to find and create the contact list.
-      if (empty($this->contact_list_id)) {
-        $connection_id = $this->getSetting('connection_id');
-        $contact_list_prefix = $this->getSetting('contact_list_prefix');
+    if ($isPublished && (!empty($this->sendnow) || !empty($this->sendlater))) {
+      // Dynamic - Create contact list using node title.
+      if ($contact_list_creation == 'dynamic') {
+        // There is no contact list stored.
+        // Need to find and create the contact list.
+        if (empty($this->contact_list_id)) {
+          $connection_id = $this->getSetting('connection_id');
+          $contact_list_prefix = $this->getSetting('contact_list_prefix');
 
-        if (!empty($connections) && !empty($connections[$connection_id])) {
-          // Get connection.
-          $connection = $connections[$connection_id];
+          if (!empty($connections) && !empty($connections[$connection_id])) {
+            // Get connection.
+            $connection = $connections[$connection_id];
 
-          if (!empty($connection)) {
-            // Get entity title.
-            $title = $entity->getTitle();
+            if (!empty($connection)) {
+              // Get entity title.
+              $title = $entity->getTitle();
 
-            if (!empty($contact_list_prefix)) {
-              $title = $contact_list_prefix . $title;
-            }
+              if (!empty($contact_list_prefix)) {
+                $title = $contact_list_prefix . $title;
+              }
 
-            // @todo wrap in function to pass title.
-            if (!empty($title)) {
-              // Find contact list by title.
-              $contact_list = $api->findByNameContactLists($connection, $title);
+              // @todo wrap in function to pass title.
+              if (!empty($title)) {
+                // Find contact list by title.
+                $contact_list = $api->findByNameContactLists($connection, $title);
 
-              // There is no contact list found.
-              if (empty($contact_list)) {
-                // Create the contact list using the title.
-                $contact_list_data = [
-                  'name' => $title,
-                ];
+                // There is no contact list found.
+                if (empty($contact_list)) {
+                  // Create the contact list using the title.
+                  $contact_list_data = [
+                    'name' => $title,
+                  ];
 
-                $contact_list_response = $api->createContactList($connection, $contact_list_data);
+                  $contact_list_response = $api->createContactList($connection, $contact_list_data);
 
-                if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
-                  // Save the contact list ID.
-                  $this->contact_list_id = $connection_id . ':' . $contact_list_response['list_id'];
+                  if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
+                    // Save the contact list ID.
+                    $this->contact_list_id = $connection_id . ':' . $contact_list_response['list_id'];
 
-                  $message = $this->t('The contact list @name has been created.', [
-                    '@name' => $contact_list_response['name'],
-                  ]);
+                    $message = $this->t('The contact list @name has been created.', [
+                      '@name' => $contact_list_response['name'],
+                    ]);
 
-                  \Drupal::logger('constant_contact_mailout')->notice($message);
-                  \Drupal::messenger()->addMessage($message, 'status', FALSE);
+                    \Drupal::logger('constant_contact_mailout')->notice($message);
+                    \Drupal::messenger()->addMessage($message, 'status', FALSE);
+                  }
+                  else {
+                    $errors = $api->processErrorResponse($contact_list_response);
+
+                    $message = $this->t('Constant Contact: @errors', [
+                      '@errors' => implode('. ', $errors),
+                    ]);
+
+                    \Drupal::logger('constant_contact_mailout')->error($message);
+                    \Drupal::messenger()->addMessage($message, 'error', FALSE);
+                  }
                 }
                 else {
-                  $errors = $api->processErrorResponse($contact_list_response);
-
-                  $message = $this->t('Constant Contact: @errors', [
-                    '@errors' => implode('. ', $errors),
-                  ]);
-
-                  \Drupal::logger('constant_contact_mailout')->error($message);
-                  \Drupal::messenger()->addMessage($message, 'error', FALSE);
-                }
-              }
-              else {
-                if (!empty($contact_list['list_id'])) {
-                  $this->contact_list_id = $connection_id . ':' . $contact_list['list_id'];
+                  if (!empty($contact_list['list_id'])) {
+                    $this->contact_list_id = $connection_id . ':' . $contact_list['list_id'];
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-    elseif ($contact_list_creation == 'reference') {
-      // Selected node types.
-      $node_types = $this->getSetting('node_types');
+      elseif ($contact_list_creation == 'reference') {
+        // Selected node types.
+        $node_types = $this->getSetting('node_types');
 
-      $entity_type_id = $entity->getEntityType()->id();
-      $content_type = $entity->getType();
+        $entity_type_id = $entity->getEntityType()->id();
+        $content_type = $entity->getType();
 
-      // Get fields.
-      $definitions = $entity->getFieldDefinitions($entity_type_id, $content_type);
+        // Get fields.
+        $definitions = $entity->getFieldDefinitions($entity_type_id, $content_type);
 
-      if (!empty($definitions)) {
-        foreach ($definitions as $definition) {
-          if ($definition instanceof FieldConfigInterface) {
-            if ($definition->getType() == 'entity_reference') {
-              $settings = $definition->getSettings();
+        if (!empty($definitions)) {
+          foreach ($definitions as $definition) {
+            if ($definition instanceof FieldConfigInterface) {
+              if ($definition->getType() == 'entity_reference') {
+                $settings = $definition->getSettings();
 
-              if (!empty($settings['target_type']) && $settings['target_type'] == 'node') {
-                $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                if (!empty($settings['target_type']) && $settings['target_type'] == 'node') {
+                  $target_bundle = reset($settings['handler_settings']['target_bundles']);
 
-                if (in_array($target_bundle, $node_types)) {
-                  // Get field machine name.
-                  $field_name = $definition->getName();
+                  if (in_array($target_bundle, $node_types)) {
+                    // Get field machine name.
+                    $field_name = $definition->getName();
 
-                  // Get value.
-                  $value = $entity->$field_name->getValue();
-                  $value = reset($value);
+                    // Get value.
+                    $value = $entity->$field_name->getValue();
+                    $value = reset($value);
 
-                  if (!empty($value['target_id'])) {
-                    // Load entity.
-                    $_entity = \Drupal::entityTypeManager()->getStorage($settings['target_type'])->load($value['target_id']);
+                    if (!empty($value['target_id'])) {
+                      // Load entity.
+                      $_entity = \Drupal::entityTypeManager()->getStorage($settings['target_type'])->load($value['target_id']);
 
-                    if (!empty($_entity)) {
-                      // Get fields.
-                      $_definitions = $_entity->getFieldDefinitions();
+                      if (!empty($_entity)) {
+                        // Get fields.
+                        $_definitions = $_entity->getFieldDefinitions();
 
-                      if (!empty($_definitions)) {
-                        foreach ($_definitions as $_definition) {
-                          if ($_definition instanceof FieldConfigInterface) {
-                            $fieldType = $_definition->getFieldStorageDefinition()->getType();
+                        if (!empty($_definitions)) {
+                          foreach ($_definitions as $_definition) {
+                            if ($_definition instanceof FieldConfigInterface) {
+                              $fieldType = $_definition->getFieldStorageDefinition()->getType();
 
-                            if ($fieldType == 'constant_contact_mailout') {
-                              $_settings = $_definition->getSettings();
+                              if ($fieldType == 'constant_contact_mailout') {
+                                $_settings = $_definition->getSettings();
 
-                              // @todo Check if there's stored value?
-                              if (!empty($_settings['contact_list_creation']) && $_settings['contact_list_creation'] == 'dynamic') {
-                                // Get field machine name.
-                                $field_name = $_definition->getName();
+                                // @todo Check if there's stored value?
+                                if (!empty($_settings['contact_list_creation']) && $_settings['contact_list_creation'] == 'dynamic') {
+                                  // Get field machine name.
+                                  $field_name = $_definition->getName();
 
-                                // Get value.
-                                $value = $_entity->$field_name->getValue();
-                                $value = reset($value);
+                                  // Get value.
+                                  $value = $_entity->$field_name->getValue();
+                                  $value = reset($value);
 
-                                if (empty($value['contact_list_id'])) {
-                                  $connection_id = $_settings['connection_id'];
-                                  $contact_list_prefix = $_settings['contact_list_prefix'];
+                                  if (empty($value['contact_list_id'])) {
+                                    $connection_id = $_settings['connection_id'];
+                                    $contact_list_prefix = $_settings['contact_list_prefix'];
 
-                                  if (!empty($connections) && !empty($connections[$connection_id])) {
-                                    // Get connection.
-                                    $connection = $connections[$connection_id];
+                                    if (!empty($connections) && !empty($connections[$connection_id])) {
+                                      // Get connection.
+                                      $connection = $connections[$connection_id];
 
-                                    if (!empty($connection)) {
-                                      // Get entity title.
-                                      $title = $_entity->getTitle();
+                                      if (!empty($connection)) {
+                                        // Get entity title.
+                                        $title = $_entity->getTitle();
 
-                                      if (!empty($contact_list_prefix)) {
-                                        $title = $contact_list_prefix . $title;
-                                      }
-
-                                      if (!empty($title)) {
-                                        // Find contact list by title.
-                                        $contact_list = $api->findByNameContactLists($connection, $title);
-
-                                        // There is no contact list found.
-                                        if (empty($contact_list)) {
-                                          // Create the contact list using the title.
-                                          $contact_list_data = [
-                                            'name' => $title,
-                                          ];
-
-                                          $contact_list_response = $api->createContactList($connection, $contact_list_data);
-
-                                          if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
-                                            // Save the contact list ID.
-                                            $_entity->$field_name->value = $connection_id . ':' . $contact_list_response['list_id'];
-
-                                            $message = $this->t('The contact list @name has been created.', [
-                                              '@name' => $contact_list_response['name'],
-                                            ]);
-
-                                            \Drupal::logger('constant_contact_mailout')->notice($message);
-                                            \Drupal::messenger()->addMessage($message, 'status', FALSE);
-                                          }
+                                        if (!empty($contact_list_prefix)) {
+                                          $title = $contact_list_prefix . $title;
                                         }
-                                        else {
-                                          if (!empty($contact_list['list_id'])) {
-                                            // Save the contact list ID.
-                                            $_entity->$field_name->value = $connection_id . ':' . $contact_list['list_id'];
-                                            $_entity->save();
+
+                                        if (!empty($title)) {
+                                          // Find contact list by title.
+                                          $contact_list = $api->findByNameContactLists($connection, $title);
+
+                                          // There is no contact list found.
+                                          if (empty($contact_list)) {
+                                            // Create the contact list using the title.
+                                            $contact_list_data = [
+                                              'name' => $title,
+                                            ];
+
+                                            $contact_list_response = $api->createContactList($connection, $contact_list_data);
+
+                                            if (!empty($contact_list_response) && !empty($contact_list_response['list_id'])) {
+                                              // Save the contact list ID.
+                                              $_entity->$field_name->value = $connection_id . ':' . $contact_list_response['list_id'];
+
+                                              $message = $this->t('The contact list @name has been created.', [
+                                                '@name' => $contact_list_response['name'],
+                                              ]);
+
+                                              \Drupal::logger('constant_contact_mailout')->notice($message);
+                                              \Drupal::messenger()->addMessage($message, 'status', FALSE);
+                                            }
+                                          }
+                                          else {
+                                            if (!empty($contact_list['list_id'])) {
+                                              // Save the contact list ID.
+                                              $_entity->$field_name->value = $connection_id . ':' . $contact_list['list_id'];
+                                              $_entity->save();
+                                            }
                                           }
                                         }
                                       }
@@ -1235,7 +1238,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
 
           $email_campaign_activity_schedule_response = $api->scheduleEmailCampaignActivities($connection, $campaign_activity_id, $schedule_data);
 
-          if (!empty($email_campaign_activity_schedule_response) && !empty($email_campaign_activity_schedule_response[0]['scheduled_date'])) {
+          if ((empty($email_campaign_activity_schedule_response) && $schedule_data['scheduled_date'] == 0) || (!empty($email_campaign_activity_schedule_response) && !empty($email_campaign_activity_schedule_response[0]['scheduled_date']))) {
             $contact_list_names = [];
 
             // Do I need this here??
