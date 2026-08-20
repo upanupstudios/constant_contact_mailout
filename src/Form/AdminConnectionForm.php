@@ -4,6 +4,8 @@ namespace Drupal\constant_contact_mailout\Form;
 
 use Drupal\constant_contact_mailout\ApiService;
 use Drupal\constant_contact_mailout\Utility\TextHelper;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
@@ -56,8 +58,14 @@ class AdminConnectionForm extends ConfigFormBase {
    *   The messenger service.
    * @param \Drupal\Core\Routing\RouteMatchInterface $current_route_match
    *   The current route match.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory interface.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typed_config_manager
+   *   The typed config manager.
    */
-  public function __construct(ApiService $api, MessengerInterface $messenger, RouteMatchInterface $current_route_match) {
+  public function __construct(ApiService $api, MessengerInterface $messenger, RouteMatchInterface $current_route_match, ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager) {
+    parent::__construct($config_factory, $typed_config_manager);
+
     $this->api = $api;
     $this->messenger = $messenger;
     $this->currentRouteMatch = $current_route_match;
@@ -76,7 +84,9 @@ class AdminConnectionForm extends ConfigFormBase {
     return new static(
       $container->get('constant_contact_mailout.api'),
       $container->get('messenger'),
-      $container->get('current_route_match')
+      $container->get('current_route_match'),
+      $container->get('config.factory'),
+      $container->get('config.typed')
     );
   }
 

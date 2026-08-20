@@ -3,6 +3,7 @@
 namespace Drupal\constant_contact_mailout\Form;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\LoggerChannel;
@@ -59,12 +60,17 @@ class AdminSettingsForm extends ConfigFormBase {
    *   The messenger service.
    * @param \Drupal\Core\Logger\LoggerChannel $logger
    *   The logger channel factory.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory interface.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typed_config_manager
+   *   The typed config manager.
    */
-  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannel $logger, ConfigFactoryInterface $config_factory) {
+  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannel $logger, ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager) {
+    parent::__construct($config_factory, $typed_config_manager);
+
     $this->request = $request;
     $this->messenger = $messenger;
     $this->logger = $logger;
-    $this->configFactory = $config_factory;
 
     // Get settings.
     $this->settings = $this->configFactory->get('constant_contact_mailout.settings');
@@ -78,7 +84,8 @@ class AdminSettingsForm extends ConfigFormBase {
       $container->get('request_stack')->getCurrentRequest(),
       $container->get('messenger'),
       $container->get('logger.factory')->get('constant_contact_mailout'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('config.typed')
     );
   }
 

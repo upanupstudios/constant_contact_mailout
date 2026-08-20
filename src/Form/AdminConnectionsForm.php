@@ -2,6 +2,8 @@
 
 namespace Drupal\constant_contact_mailout\Form;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
@@ -32,8 +34,14 @@ class AdminConnectionsForm extends ConfigFormBase {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $current_route_match
    *   The current route match.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory interface.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typed_config_manager
+   *   The typed config manager.
    */
-  public function __construct(RouteMatchInterface $current_route_match) {
+  public function __construct(RouteMatchInterface $current_route_match, ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager) {
+    parent::__construct($config_factory, $typed_config_manager);
+
     $this->currentRouteMatch = $current_route_match;
 
     // Get route name.
@@ -45,7 +53,9 @@ class AdminConnectionsForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('current_route_match')
+      $container->get('current_route_match'),
+      $container->get('config.factory'),
+      $container->get('config.typed')
     );
   }
 

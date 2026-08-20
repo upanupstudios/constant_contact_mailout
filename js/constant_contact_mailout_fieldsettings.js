@@ -60,7 +60,11 @@
   Drupal.behaviors.constantContactMailoutFieldItem = {
     attach: function (context, settings)
     {
-      init();
+      // Only initialise once per set of radios, so handlers are not bound
+      // again every time behaviors are re-attached.
+      if (once('constant-contact-mailout-fieldsettings', 'input.contact-list-creation-radios', context).length) {
+        init();
+      }
     }
   };
 }(jQuery, Drupal, once));

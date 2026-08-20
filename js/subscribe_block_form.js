@@ -1,16 +1,12 @@
 (function ($, Drupal, once)
 {
-  var initialized = false;
   var $subscribeBlockForm = null;
   var $test = false;
 
   function init() {
     $subscribeBlockForm = $('form.constant-contact-mailout-subscribe-block-form');
 
-    // Run once
-    if (!initialized && $subscribeBlockForm.length == 1) {
-      initialized = true;
-
+    if ($subscribeBlockForm.length == 1) {
       if ($subscribeBlockForm.find('fieldset.contact-list-ids').length != 0) {
         if ($subscribeBlockForm.find('#edit-contact-list-ids-all-all').length) {
           $subscribeBlockForm.find('#edit-contact-list-ids-all-all').click(function() {
@@ -164,7 +160,11 @@
   Drupal.behaviors.constantContactMailoutSubscribeBlockForm = {
     attach: function(context, settings)
     {
-      init();
+      // Only initialise once per form, so handlers are not bound again every
+      // time behaviors are re-attached.
+      if (once('constant-contact-mailout-subscribe-block-form', 'form.constant-contact-mailout-subscribe-block-form', context).length) {
+        init();
+      }
     },
   };
 

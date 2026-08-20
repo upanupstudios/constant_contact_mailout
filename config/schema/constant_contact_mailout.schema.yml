@@ -1,0 +1,199 @@
+constant_contact_mailout.settings:
+  type: config_object
+  label: 'Constant Contact Mailout settings'
+  mapping:
+    default_base_url:
+      type: string
+      label: 'Default base URL'
+    debug_render_template:
+      type: boolean
+      label: 'Render email template on screen when publishing a content node'
+    debug_sendto_contact_list:
+      type: string
+      label: 'Send all mailings to this contact list'
+    connections:
+      type: sequence
+      label: 'Connections'
+      sequence:
+        type: mapping
+        label: 'Connection'
+        mapping:
+          id:
+            type: string
+            label: 'Machine name'
+          name:
+            type: label
+            label: 'Name'
+          api_key:
+            type: string
+            label: 'API key'
+          secret:
+            type: string
+            label: 'Secret'
+          sender_from_name:
+            type: label
+            label: 'From name'
+          sender_from_email:
+            type: email
+            label: 'From email'
+          sender_replyto_email:
+            type: email
+            label: 'Reply-to email'
+          access_token:
+            type: string
+            label: 'Access token'
+          refresh_token:
+            type: string
+            label: 'Refresh token'
+          expires:
+            type: integer
+            label: 'Access token expiry timestamp'
+          lists:
+            type: sequence
+            label: 'Cached contact lists'
+            sequence:
+              # Stored verbatim as returned by the Constant Contact API.
+              type: ignore
+              label: 'Contact list'
+
+field.storage_settings.constant_contact_mailout:
+  type: mapping
+  label: 'Constant Contact mailout field storage settings'
+  mapping: {}
+
+field.field_settings.constant_contact_mailout:
+  type: mapping
+  label: 'Constant Contact mailout field settings'
+  mapping:
+    subject:
+      type: label
+      label: 'Email subject'
+    contact_list_creation:
+      type: string
+      label: 'Contact list creation method'
+    connection_id:
+      type: string
+      label: 'Connection'
+    contact_list_prefix:
+      type: label
+      label: 'Contact list prefix'
+    contact_list_ids:
+      type: sequence
+      label: 'Selected contact lists'
+      sequence:
+        type: string
+        label: 'Contact list ID'
+    contact_list_select:
+      type: boolean
+      label: 'Select contact lists before sending'
+    vocabularies:
+      type: sequence
+      label: 'Mapped vocabularies'
+      sequence:
+        type: string
+        label: 'Vocabulary ID'
+    terms:
+      type: sequence
+      label: 'Taxonomy term to contact list mapping'
+      sequence:
+        type: sequence
+        label: 'Connection'
+        sequence:
+          type: sequence
+          label: 'Contact lists'
+          sequence:
+            type: string
+            label: 'Contact list ID'
+    node_types:
+      type: sequence
+      label: 'Mapped content types'
+      sequence:
+        type: string
+        label: 'Content type ID'
+    sendnow_label:
+      type: label
+      label: 'Send now label'
+    sendnow_description:
+      type: label
+      label: 'Send now description'
+    sendnow_select_contact_lists:
+      type: boolean
+      label: 'Select contact lists when sending now'
+    scheduled_mailout:
+      type: boolean
+      label: 'Enable scheduled mailout'
+    scheduled_mailout_label:
+      type: label
+      label: 'Scheduled mailout label'
+    scheduled_mailout_description:
+      type: label
+      label: 'Scheduled mailout description'
+
+field.value.constant_contact_mailout:
+  type: mapping
+  label: 'Default value'
+  mapping:
+    contact_list_id:
+      type: string
+      label: 'Contact list ID'
+
+field.widget.settings.constant_contact_mailout_default:
+  type: mapping
+  label: 'Constant Contact mailout widget settings'
+  mapping:
+    placeholder:
+      type: label
+      label: 'Placeholder'
+
+block.settings.constant_contact_mailout_subscribe_block:
+  type: block_settings
+  label: 'Constant Contact Subscribe block'
+  mapping:
+    description:
+      type: text
+      label: 'Description'
+    fields:
+      type: sequence
+      label: 'Enabled fields'
+      sequence:
+        type: string
+        label: 'Field name'
+    subscription:
+      type: string
+      label: 'Subscription method'
+    connection_id:
+      type: string
+      label: 'Connection'
+    contact_list_prefix:
+      type: label
+      label: 'Contact list prefix'
+    contact_list_ids:
+      type: sequence
+      label: 'Selected contact lists'
+      sequence:
+        type: string
+        label: 'Contact list ID'
+    show_contact_lists:
+      type: boolean
+      label: 'Show contact lists'
+    show_select_all:
+      type: boolean
+      label: 'Show select all'
+    group_contact_lists_label:
+      type: label
+      label: 'List label'
+    group_contact_lists:
+      type: boolean
+      label: 'Group contact lists by delimiter'
+    group_contact_lists_delimiter:
+      type: string
+      label: 'Delimiter'
+    group_contact_lists_order:
+      type: string
+      label: 'Group order'
+    subscribed_message:
+      type: text
+      label: 'Subscribed message'
+    unsubscribed_message:
+      type: text
+      label: 'Unsubscribe message'

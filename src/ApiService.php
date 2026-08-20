@@ -122,7 +122,15 @@ class ApiService implements ContainerInjectionInterface {
    * {@inheritdoc}
    */
   public function refreshAccessToken($connection, $forceRefresh = FALSE) {
-    if ($forceRefresh || time() >= abs($connection['expires'])) {
+    // A connection that has never been authorized has nothing to refresh.
+    if (empty($connection['refresh_token'])) {
+      return $connection;
+    }
+
+    // Cast explicitly: passing NULL to abs() is deprecated as of PHP 8.1.
+    $expires = abs((int) ($connection['expires'] ?? 0));
+
+    if ($forceRefresh || time() >= $expires) {
       // Get connections.
       $connections = $this->settings->get('connections');
 
@@ -132,7 +140,7 @@ class ApiService implements ContainerInjectionInterface {
       if (!empty($response) && !empty($response['access_token'])) {
         $connection['access_token'] = $response['access_token'];
         $connection['refresh_token'] = $response['refresh_token'];
-        $connection['expires'] = time() + abs($response['expires_in']);
+        $connection['expires'] = time() + abs((int) ($response['expires_in'] ?? 0));
 
         // Get all contact lists.
         // @todo There's a 1000 retrieve list limit, which we likely won't go over?

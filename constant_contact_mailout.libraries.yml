@@ -3,6 +3,7 @@ constant_contact_mailout_fieldsettings:
     js/constant_contact_mailout_fieldsettings.js: {}
   dependencies:
     - core/jquery
+    - core/once
     - core/drupal
     - core/drupalSettings
 constant_contact_mailout_widget:
@@ -10,6 +11,7 @@ constant_contact_mailout_widget:
     js/constant_contact_mailout_widget.js: {}
   dependencies:
     - core/jquery
+    - core/once
     - core/drupal
     - core/drupalSettings
 constant_contact_mailout.subscribe_block:
@@ -18,7 +20,7 @@ constant_contact_mailout.subscribe_block:
   dependencies:
     - core/drupal
     - core/jquery
-    - core/jquery.once
+    - core/once
 constant_contact_mailout.subscribe_block_form:
   js:
     js/jquery.tmpl.min.js: {}
@@ -26,4 +28,4 @@ constant_contact_mailout.subscribe_block_form:
   dependencies:
     - core/drupal
     - core/jquery
-    - core/jquery.once
+    - core/once

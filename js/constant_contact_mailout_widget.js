@@ -39,7 +39,11 @@
   Drupal.behaviors.constantContactMailoutWidget = {
     attach: function (context, settings)
     {
-      init();
+      // Only initialise once per widget, so handlers are not bound again
+      // every time behaviors are re-attached.
+      if (once('constant-contact-mailout-widget', '.sendnow-checkbox', context).length) {
+        init();
+      }
     }
   };
 }(jQuery, Drupal, once));

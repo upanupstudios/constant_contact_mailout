@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for Constant Contact Mailout.
+ */
+
+/**
+ * Remove settings and block keys left behind by earlier module versions.
+ *
+ * Config schema was added in 1.0.9. Existing sites still carry keys that the
+ * module no longer reads, which would fail schema validation on Drupal 11.
+ */
+function constant_contact_mailout_update_10001(&$sandbox) {
+  $messages = [];
+
+  // The sender information moved into each connection, and the debug contact
+  // list setting was renamed to "debug_sendto_contact_list". None of these
+  // keys are read anymore.
+  $obsolete_settings = [
+    'sender_from_name',
+    'sender_from_email',
+    'sender_replyto_email',
+    'debug_sendto_contact_list_id',
+  ];
+
+  $settings = \Drupal::configFactory()->getEditable('constant_contact_mailout.settings');
+  $removed = [];
+
+  foreach ($obsolete_settings as $key) {
+    if ($settings->get($key) !== NULL) {
+      $settings->clear($key);
+      $removed[] = $key;
+    }
+  }
+
+  if (!empty($removed)) {
+    $settings->save();
+    $messages[] = t('Removed obsolete settings: @keys.', [
+      '@keys' => implode(', ', $removed),
+    ]);
+  }
+
+  // The subscribe block renamed two message settings. Carry the stored values
+  // over so the configured text is not lost, then drop the old keys.
+  $renamed_block_settings = [
+    'success_message' => 'subscribed_message',
+    'unsubscribe' => 'unsubscribed_message',
+  ];
+
+  $block_storage = \Drupal::entityTypeManager()->getStorage('block');
+  $updated_blocks = 0;
+
+  foreach ($block_storage->loadMultiple() as $block) {
+    if ($block->getPluginId() !== 'constant_contact_mailout_subscribe_block') {
+      continue;
+    }
+
+    $block_settings = $block->get('settings');
+    $changed = FALSE;
+
+    foreach ($renamed_block_settings as $old_key => $new_key) {
+      if (!array_key_exists($old_key, $block_settings)) {
+        continue;
+      }
+
+      // Only carry the value over when the new key has nothing in it.
+      if (empty($block_settings[$new_key]) && !empty($block_settings[$old_key])) {
+        $block_settings[$new_key] = $block_settings[$old_key];
+      }
+
+      unset($block_settings[$old_key]);
+      $changed = TRUE;
+    }
+
+    if ($changed) {
+      $block->set('settings', $block_settings);
+      $block->save();
+      $updated_blocks++;
+    }
+  }
+
+  if ($updated_blocks > 0) {
+    $messages[] = t('Updated @count Constant Contact Subscribe block(s).', [
+      '@count' => $updated_blocks,
+    ]);
+  }
+
+  if (empty($messages)) {
+    return t('No obsolete configuration found.');
+  }
+
+  return implode(' ', $messages);
+}

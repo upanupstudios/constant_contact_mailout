@@ -117,7 +117,7 @@ class ConnectionsController extends ControllerBase {
     $connections = $this->settings->get('connections');
     $params = $this->request->query->all();
 
-    if (!empty($params['code']) && !empty($params['state']) && $connections[$params['state']]) {
+    if (!empty($params['code']) && !empty($params['state']) && !empty($connections[$params['state']])) {
       $id = $params['state'];
       $connection = $connections[$id];
 
@@ -131,7 +131,8 @@ class ConnectionsController extends ControllerBase {
         // Save access_token and refresh token.
         $connection['access_token'] = $response['access_token'];
         $connection['refresh_token'] = $response['refresh_token'];
-        $connection['expires'] = time() + abs($response['expires_in']);
+        // Cast explicitly: passing NULL to abs() is deprecated as of PHP 8.1.
+        $connection['expires'] = time() + abs((int) ($response['expires_in'] ?? 0));
 
         // Get all contact lists.
         // @todo There's a 1000 retrieve list limit, which we likely won't go over?
