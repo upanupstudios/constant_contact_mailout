@@ -11,7 +11,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Logger\LoggerChannel;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -29,7 +29,7 @@ class SubscribeBlockForm extends FormBase {
   /**
    * Logger service.
    *
-   * @var Drupal\Core\Logger\LoggerChannel
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
   protected $logger;
 
@@ -57,7 +57,7 @@ class SubscribeBlockForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(ApiService $api, EntityFieldManager $entity_field_manager, ConfigFactoryInterface $config_factory, LoggerChannel $logger) {
+  public function __construct(ApiService $api, EntityFieldManager $entity_field_manager, ConfigFactoryInterface $config_factory, LoggerChannelInterface $logger) {
     $this->api = $api;
     $this->entityFieldManager = $entity_field_manager;
     $this->configFactory = $config_factory;

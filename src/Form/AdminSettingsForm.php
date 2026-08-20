@@ -6,7 +6,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Logger\LoggerChannel;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,7 +33,7 @@ class AdminSettingsForm extends ConfigFormBase {
   /**
    * Messenger service.
    *
-   * @var Drupal\Core\Logger\LoggerChannel
+   * @var \Drupal\Core\Logger\LoggerChannelInterface
    */
   protected $logger;
 
@@ -58,14 +58,14 @@ class AdminSettingsForm extends ConfigFormBase {
    *   The request stack object.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger service.
-   * @param \Drupal\Core\Logger\LoggerChannel $logger
+   * @param \Drupal\Core\Logger\LoggerChannelInterface $logger
    *   The logger channel factory.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory interface.
    * @param \Drupal\Core\Config\TypedConfigManagerInterface $typed_config_manager
    *   The typed config manager.
    */
-  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannel $logger, ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager) {
+  public function __construct(Request $request, MessengerInterface $messenger, LoggerChannelInterface $logger, ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager) {
     parent::__construct($config_factory, $typed_config_manager);
 
     $this->request = $request;
