@@ -4,6 +4,7 @@ namespace Drupal\constant_contact_mailout\Plugin\Block;
 
 use Drupal\block\Entity\Block;
 use Drupal\constant_contact_mailout\Form\SubscribeBlockForm;
+use Drupal\constant_contact_mailout\Utility\TextHelper;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormBuilderInterface;
@@ -219,6 +220,8 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
           uasort($lists, function ($a, $b) {
             return strcmp($a->__toString(), $b->__toString());
           });
+
+          $id = TextHelper::textToMachineName($name);
 
           $form['constant_contact']['subscription_select']['contact_list_ids'][$id] = [
             '#title' => $name,

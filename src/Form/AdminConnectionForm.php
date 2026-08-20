@@ -133,7 +133,7 @@ class AdminConnectionForm extends ConfigFormBase {
       '@constant_contact' => Link::fromTextAndUrl($this->t('Constant Contact'), $contant_contact_url)->toString(),
     ]));
 
-    // @todo: Add note to add the following redirect_uri: /admin/config/services/constant_contact_mailout/connections/authorize
+    // @todo: Add note to add the following redirect_uri: /admin/config/constant_contact_mailout/connections/authorize
 
     $app_integration_url = Url::fromUri('https://developer.constantcontact.com/api_guide/apps_create.html', ['attributes' => ['target' => '_blank']]);
 

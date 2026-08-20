@@ -247,10 +247,12 @@ class SubscribeBlockForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function validateFormCallback(FormStateInterface $form_state) {
+  public function validateFormCallback(FormStateInterface $form_state, array $settings = []) {
     $valid = TRUE;
     $values = $form_state->getValues();
-    $show_contact_lists = $this->settings->get('show_contact_lists');
+
+    // Contact list checkboxes are only rendered for the select subscription.
+    $show_contact_lists = !empty($settings['show_contact_lists']) && $values['subscription'] == 'select';
     $contact_list_ids = [];
 
     if (!empty($show_contact_lists)) {
@@ -308,7 +310,6 @@ class SubscribeBlockForm extends FormBase {
     $block = Block::load($machine_name);
     $settings = NULL;
     $subscribed_message = NULL;
-    $messages = [];
 
     if (!empty($block)) {
       $settings = $block->get('settings');
@@ -322,12 +323,12 @@ class SubscribeBlockForm extends FormBase {
       \Drupal::messenger()->deleteAll();
 
       // Validation.
-      $is_valid = $this->validateFormCallback($form_state);
+      $is_valid = $this->validateFormCallback($form_state, $settings);
 
       if ($is_valid) {
         $connections = $this->settings->get('connections');
         $values = $form_state->getValues();
-        $show_contact_lists = $this->settings->get('show_contact_lists');
+        $show_contact_lists = !empty($settings['show_contact_lists']);
         $contact_list_ids = [];
         $connection_contact_lists = [];
 
@@ -439,20 +440,58 @@ class SubscribeBlockForm extends FormBase {
         }
 
         if (!empty($connection_contact_lists)) {
+          $results = [];
+
           foreach ($connection_contact_lists as $connection_id => $contact_list_ids) {
             $connection = $connections[$connection_id];
 
             if (!empty($connection) && !empty($contact_list_ids)) {
-              // @todo How to handle error?
-              $messages[] = $this->api->subscribe($connection, $contact_list_ids, $values);
+              $results[] = $this->api->subscribe($connection, $contact_list_ids, $values);
             }
           }
 
-          // Make messages unique.
-          $messages = array_filter($messages);
+          // Subscribing is a single action to the visitor even when it spans
+          // several connections, so report one outcome for the whole
+          // submission rather than one message per connection. The failures
+          // are logged per connection by the API service.
+          $subscribed_lists = [];
+          $failed_lists = [];
+          $errors = [];
 
-          if (!empty($messages) && empty($subscribed_message)) {
-            $subscribed_message = implode('. ', $messages) . '.';
+          foreach (array_filter($results) as $result) {
+            if (!empty($result['success'])) {
+              $subscribed_lists = array_merge($subscribed_lists, $result['contact_list_names']);
+            }
+            else {
+              $failed_lists = array_merge($failed_lists, $result['contact_list_names']);
+              $errors = array_merge($errors, $result['errors']);
+            }
+          }
+
+          $subscribed_lists = array_unique($subscribed_lists);
+          $failed_lists = array_unique($failed_lists);
+          $errors = array_unique(array_map('strval', $errors));
+
+          if (empty($subscribed_message) && !empty($results)) {
+            $arguments = [
+              '@email_address' => $values['email'],
+              '@subscribed_lists' => implode(', ', $subscribed_lists),
+              '@failed_lists' => implode(', ', $failed_lists),
+              '@errors' => !empty($errors) ? rtrim(implode('. ', $errors), '.') . '.' : '',
+            ];
+
+            if (empty($failed_lists)) {
+              $subscribed_message = $this->t('The @email_address email is now subscribed.', $arguments);
+            }
+            elseif (empty($subscribed_lists)) {
+              // Nothing succeeded, so naming the lists adds nothing.
+              $subscribed_message = $this->t('Could not subscribe @email_address. @errors', $arguments);
+            }
+            else {
+              $subscribed_message = $this->t('The @email_address email was only subscribed to @subscribed_lists. Could not subscribe to @failed_lists. @errors', $arguments);
+            }
+
+            $subscribed_message = trim((string) $subscribed_message);
           }
 
           $ajaxResponse->addCommand(

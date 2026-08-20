@@ -130,7 +130,7 @@ class ApiService implements ContainerInjectionInterface {
     // Cast explicitly: passing NULL to abs() is deprecated as of PHP 8.1.
     $expires = abs((int) ($connection['expires'] ?? 0));
 
-    if ($forceRefresh || time() >= $expires) {
+    if ($forceRefresh || empty($connection['access_token']) || time() >= $expires) {
       // Get connections.
       $connections = $this->settings->get('connections');
 
@@ -142,9 +142,10 @@ class ApiService implements ContainerInjectionInterface {
         $connection['refresh_token'] = $response['refresh_token'];
         $connection['expires'] = time() + abs((int) ($response['expires_in'] ?? 0));
 
-        // Get all contact lists.
+        // Get all contact lists. The token was just refreshed, so call the
+        // client directly to avoid recursing back into this method.
         // @todo There's a 1000 retrieve list limit, which we likely won't go over?
-        $contact_lists = $this->getAllContactLists($connection, [
+        $contact_lists = $this->getConstantContact($connection)->contactLists()->getAll([
           'include_count' => 'true',
           'status' => 'active',
           'include_membership_count' => 'all',
@@ -161,106 +162,264 @@ class ApiService implements ContainerInjectionInterface {
         $settings->set('connections', $connections)
           ->save();
       }
+      else {
+        // The refresh token is rotated on every use, so a failure here means
+        // the connection has to be re-authorized from the connections page.
+        $message = t('Constant Contact: Could not refresh the access token for the @name connection. @errors The connection may need to be re-authorized.', [
+          '@name' => $connection['name'],
+          '@errors' => !empty($response['error_description']) ? $response['error_description'] : implode('. ', $this->processErrorResponse($response)),
+        ]);
+
+        $this->logger->error($message);
+      }
     }
 
     return $connection;
   }
 
   /**
+   * Creates a Constant Contact client for a connection.
+   *
+   * @param array $connection
+   *   The connection.
+   *
+   * @return \Upanupstudios\ConstantContact\Php\Client\ConstantContact
+   *   The Constant Contact client.
+   */
+  protected function getConstantContact($connection) {
+    $config = new Config((string) $connection['access_token']);
+    $httpClient = new Client();
+
+    return new ConstantContact($httpClient, $config);
+  }
+
+  /**
+   * Performs an API request, refreshing the access token when required.
+   *
+   * The access token is refreshed when it has expired, but it can also be
+   * revoked or invalidated before then. Force a refresh and retry once when
+   * the API responds with an unauthorized error.
+   *
+   * @param array $connection
+   *   The connection.
+   * @param callable $callback
+   *   Callback that receives the Constant Contact client and returns the
+   *   decoded API response.
+   * @param bool $retry_transient
+   *   Retry once when the API reports a transient failure such as a timeout.
+   *   Only pass TRUE for a request that is safe to repeat, a call that times
+   *   out can still have been applied on the Constant Contact side.
+   *
+   * @return mixed
+   *   The decoded API response.
+   */
+  protected function request($connection, callable $callback, $retry_transient = FALSE) {
+    $connection = $this->refreshAccessToken($connection);
+
+    $response = $callback($this->getConstantContact($connection));
+
+    if ($this->isUnauthorized($response)) {
+      $connection = $this->refreshAccessToken($connection, TRUE);
+
+      $response = $callback($this->getConstantContact($connection));
+    }
+
+    if ($retry_transient && $this->isTransientError($response)) {
+      $this->logger->warning('Constant Contact (@name): @errors Retrying.', [
+        '@name' => $connection['name'],
+        '@errors' => implode('. ', $this->processErrorResponse($response)),
+      ]);
+
+      $response = $callback($this->getConstantContact($connection));
+    }
+
+    return $response;
+  }
+
+  /**
+   * Checks if an API response is a transient failure worth retrying.
+   *
+   * @param mixed $response
+   *   The decoded API response.
+   *
+   * @return bool
+   *   TRUE if the response is a transient error.
+   */
+  protected function isTransientError($response) {
+    foreach ($this->processErrorKeys($response) as $key) {
+      if (preg_match('/timeout|temporarily|unavailable/i', $key)) {
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Checks if an API response is an unauthorized error.
+   *
+   * @param mixed $response
+   *   The decoded API response.
+   *
+   * @return bool
+   *   TRUE if the response is an unauthorized error.
+   */
+  protected function isUnauthorized($response) {
+    if (empty($response) || !is_array($response)) {
+      return FALSE;
+    }
+
+    // Errors are returned either as a single error or a list of errors.
+    $errors = isset($response['error_key']) || isset($response['error_message']) ? [$response] : $response;
+
+    foreach ($errors as $error) {
+      if (!is_array($error)) {
+        continue;
+      }
+
+      if (!empty($error['error_key']) && $error['error_key'] == 'unauthorized') {
+        return TRUE;
+      }
+
+      if (!empty($error['error_message']) && strcasecmp(trim($error['error_message'], ' .'), 'Unauthorized') === 0) {
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getAllContactLists($connection, $params = []) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->contactLists()->getAll($params);
+    return $this->request($connection, function ($constantContact) use ($params) {
+      return $constantContact->contactLists()->getAll($params);
+    }, TRUE);
   }
 
   /**
    * {@inheritdoc}
    */
   public function findByNameContactLists($connection, $title) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->contactLists()->findByName($title);
+    return $this->request($connection, function ($constantContact) use ($title) {
+      return $constantContact->contactLists()->findByName($title);
+    }, TRUE);
   }
 
   /**
    * {@inheritdoc}
    */
   public function createContactList($connection, $contact_list_data) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->contactLists()->add($contact_list_data);
+    return $this->request($connection, function ($constantContact) use ($contact_list_data) {
+      return $constantContact->contactLists()->add($contact_list_data);
+    });
   }
 
   /**
    * {@inheritdoc}
    */
   public function createEmailCampaigns($connection, $email_campaign_data) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->emailCampaigns()->create($email_campaign_data);
+    return $this->request($connection, function ($constantContact) use ($email_campaign_data) {
+      return $constantContact->emailCampaigns()->create($email_campaign_data);
+    });
   }
 
   /**
    * {@inheritdoc}
    */
   public function updateEmailCampaignActivities($connection, $campaign_activity_id, $email_campaign_acitivity_data) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-
-    // @todo Need to do some checking with refresh token and expiry.
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->emailCampaignActivities()->update($campaign_activity_id, $email_campaign_acitivity_data);
+    return $this->request($connection, function ($constantContact) use ($campaign_activity_id, $email_campaign_acitivity_data) {
+      return $constantContact->emailCampaignActivities()->update($campaign_activity_id, $email_campaign_acitivity_data);
+    });
   }
 
   /**
    * {@inheritdoc}
    */
   public function scheduleEmailCampaignActivities($connection, $campaign_activity_id, $schedule_data) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    $config = new Config($connection['access_token']);
-
-    // @todo Need to do some checking with refresh token and expiry.
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
-    return $constantContact->emailCampaignActivities()->schedule($campaign_activity_id, $schedule_data);
+    return $this->request($connection, function ($constantContact) use ($campaign_activity_id, $schedule_data) {
+      return $constantContact->emailCampaignActivities()->schedule($campaign_activity_id, $schedule_data);
+    });
   }
 
   /**
-   * {@inheritdoc}
+   * Gets the error keys from an API response.
+   *
+   * The error message alone is ambiguous, the same text is returned for
+   * several different conditions. The error key identifies which one.
+   *
+   * @param mixed $response
+   *   The decoded API response.
+   *
+   * @return array
+   *   The error keys.
+   */
+  protected function processErrorKeys($response) {
+    $keys = [];
+
+    if (empty($response) || !is_array($response)) {
+      return $keys;
+    }
+
+    // Errors are returned either as a single error or a list of errors.
+    $errors = isset($response['error_key']) || isset($response['error_message']) ? [$response] : $response;
+
+    foreach ($errors as $error) {
+      if (is_array($error) && !empty($error['error_key'])) {
+        $keys[] = $error['error_key'];
+      }
+    }
+
+    return $keys;
+  }
+
+  /**
+   * Gets the contact list names for a connection's contact list ids.
+   *
+   * @param array $connection
+   *   The connection.
+   * @param array $contact_list_ids
+   *   The contact list ids.
+   *
+   * @return array
+   *   The contact list names, keyed by contact list id. Falls back to the id
+   *   when the list is not in the connection's cached lists.
+   */
+  protected function getContactListNames($connection, array $contact_list_ids) {
+    $contact_list_ids = array_values($contact_list_ids);
+    $names = array_combine($contact_list_ids, $contact_list_ids);
+
+    if (!empty($connection['lists'])) {
+      foreach ($connection['lists'] as $list) {
+        if (isset($names[$list['list_id']])) {
+          $names[$list['list_id']] = $list['name'];
+        }
+      }
+    }
+
+    return $names;
+  }
+
+  /**
+   * Subscribes an email address to a connection's contact lists.
+   *
+   * @param array $connection
+   *   The connection.
+   * @param array $contact_list_ids
+   *   The contact list ids to subscribe to.
+   * @param array $data
+   *   The submitted values, keyed by field name.
+   *
+   * @return array
+   *   The outcome, with keys:
+   *   - success: TRUE when the contact was subscribed.
+   *   - contact_list_names: the names of the contact lists attempted.
+   *   - errors: the API error messages, empty when successful.
+   *   The caller composes the visitor facing message, a single submission can
+   *   span several connections and should not report each one separately.
    */
   public function subscribe($connection, $contact_list_ids, $data) {
-    // Refresh access token.
-    // $connection = $this->refreshAccessToken($connection);
-    // Contant Contact connection.
-    $config = new Config($connection['access_token']);
-
-    $httpClient = new Client();
-    $constantContact = new ConstantContact($httpClient, $config);
-
     // Required data.
     $subscribe_data = [
       'email_address' => $data['email'],
@@ -276,29 +435,45 @@ class ApiService implements ContainerInjectionInterface {
       $subscribe_data['last_name'] = $data['last_name'];
     }
 
-    // @todo Check if we need to refresh?
-    $contact_response = $constantContact->contacts()->signup($subscribe_data);
+    $contact_response = $this->request($connection, function ($constantContact) use ($subscribe_data) {
+      return $constantContact->contacts()->signup($subscribe_data);
+    }, TRUE);
 
-    if (!empty($contact_response) && !empty($contact_response['contact_id'])) {
-      // @todo Get contact lists?
-      $message = t('The @email_address email is now subscribed', [
+    $contact_list_names = $this->getContactListNames($connection, $contact_list_ids);
+    $success = !empty($contact_response) && !empty($contact_response['contact_id']);
+    $errors = $success ? [] : $this->processErrorResponse($contact_response);
+
+    // The connection is never named in what the caller returns to the visitor,
+    // so log the account here to keep failures traceable to a connection.
+    if ($success) {
+      // Pass the variables as logger context rather than rendering them into
+      // the message. Drupal rewrites "{...}" in a log message as a PSR-3
+      // placeholder, which would mangle any JSON rendered in early.
+      $this->logger->notice('Constant Contact (@name): The @email_address email is now subscribed to contact lists @contact_list_names.', [
+        '@name' => $connection['name'],
         '@email_address' => $data['email'],
+        '@contact_list_names' => implode(', ', $contact_list_names),
       ]);
-
-      $this->logger->notice($message);
     }
     else {
-      $errors = $this->processErrorResponse($contact_response);
+      $error_keys = $this->processErrorKeys($contact_response);
 
-      $message = t('Constant Contact: Could not subscribe @email_address. @errors', [
+      // The error message on its own is generic, the key identifies which
+      // condition the API rejected the request on.
+      $this->logger->error('Constant Contact (@name): Could not subscribe @email_address to contact lists @contact_list_names. @errors @error_keys', [
+        '@name' => $connection['name'],
         '@email_address' => $data['email'],
+        '@contact_list_names' => implode(', ', $contact_list_names),
         '@errors' => implode('. ', $errors) . '.',
+        '@error_keys' => !empty($error_keys) ? '[' . implode(', ', $error_keys) . ']' : '',
       ]);
-
-      $this->logger->error($message);
     }
 
-    return $message;
+    return [
+      'success' => $success,
+      'contact_list_names' => array_values($contact_list_names),
+      'errors' => $errors,
+    ];
   }
 
   /**
@@ -454,7 +629,10 @@ class ApiService implements ContainerInjectionInterface {
   public function processErrorResponse($reponse) {
     $errors = [];
 
-    if (!empty($reponse['error_message'])) {
+    if (empty($reponse) || !is_array($reponse)) {
+      $errors[] = t('No response from the Constant Contact API.');
+    }
+    elseif (!empty($reponse['error_message'])) {
       $errors[] = $reponse['error_message'];
     }
     else {

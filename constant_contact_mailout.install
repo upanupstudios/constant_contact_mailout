@@ -8,7 +8,7 @@
 /**
  * Remove settings and block keys left behind by earlier module versions.
  *
- * Config schema was added in 1.0.9. Existing sites still carry keys that the
+ * Config schema was added in 1.1.0. Existing sites still carry keys that the
  * module no longer reads, which would fail schema validation on Drupal 11.
  */
 function constant_contact_mailout_update_10001(&$sandbox) {
@@ -91,4 +91,53 @@ function constant_contact_mailout_update_10001(&$sandbox) {
   }
 
   return implode(' ', $messages);
+}
+
+/**
+ * Rebuild routing and menus, and note the new Constant Contact Redirect URI.
+ *
+ * The administration pages moved out of /admin/config/services. The authorize
+ * path is registered as the Redirect URI on the Constant Contact application
+ * behind each connection, and that is held in the Constant Contact portal, not
+ * in Drupal. Nothing here can update it, so report which connections are
+ * affected and let the site builder change them by hand.
+ */
+function constant_contact_mailout_update_10002(&$sandbox) {
+  $path = '/admin/config/constant_contact_mailout/connections/authorize';
+
+  // The old paths are cached in the router and the menu tree, so rebuild both
+  // rather than relying on a later cache rebuild. Routes go first, the menu
+  // link rebuild resolves each link against the router.
+  \Drupal::service('router.builder')->rebuild();
+  \Drupal::service('plugin.manager.menu.link')->rebuild();
+
+  $connections = \Drupal::config('constant_contact_mailout.settings')->get('connections');
+  $names = [];
+
+  if (!empty($connections)) {
+    foreach ($connections as $connection) {
+      if (!empty($connection['name'])) {
+        $names[] = $connection['name'];
+      }
+    }
+  }
+
+  if (empty($names)) {
+    return t('The Constant Contact Mailout administration pages moved to @path. No connections are configured, so there is nothing to update.', [
+      '@path' => '/admin/config/constant_contact_mailout',
+    ]);
+  }
+
+  $arguments = [
+    '@path' => $path,
+    '@names' => implode(', ', $names),
+  ];
+
+  // The update output scrolls past easily and is not shown again, so keep a
+  // copy in the log for anyone who hits the authorization failure later. Pass
+  // the variables as logger context rather than rendering them into the
+  // message, Drupal rewrites "{...}" in a log message as a PSR-3 placeholder.
+  \Drupal::logger('constant_contact_mailout')->warning('The Constant Contact Mailout administration pages moved out of /admin/config/services. Update the Redirect URI of the Constant Contact application for these connections to @path on this site: @names.', $arguments);
+
+  return t('The Constant Contact Mailout administration pages moved out of /admin/config/services. Update the Redirect URI of the Constant Contact application for each of these connections to @path on this site: @names. Until then, authorizing or re-authorizing a connection will fail. The exact URL to enter is shown when editing a connection.', $arguments);
 }

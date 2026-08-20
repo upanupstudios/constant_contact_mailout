@@ -1,5 +1,5 @@
 constant_contact_mailout.admin_index:
-  path: '/admin/config/services/constant_contact_mailout'
+  path: '/admin/config/constant_contact_mailout'
   defaults:
     _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
     _title: 'Constant Contact Mailout'
@@ -9,7 +9,7 @@ constant_contact_mailout.admin_index:
     _admin_route: TRUE
 
 constant_contact_mailout.connections:
-  path: '/admin/config/services/constant_contact_mailout/connections'
+  path: '/admin/config/constant_contact_mailout/connections'
   defaults:
     _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionsForm'
     _title: 'Connections'
@@ -19,7 +19,7 @@ constant_contact_mailout.connections:
     _admin_route: TRUE
 
 constant_contact_mailout.connections.add:
-  path: '/admin/config/services/constant_contact_mailout/connections/add'
+  path: '/admin/config/constant_contact_mailout/connections/add'
   defaults:
     _title: 'Add connection'
     _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionForm'
@@ -29,7 +29,7 @@ constant_contact_mailout.connections.add:
     _admin_route: TRUE
 
 constant_contact_mailout.connections.edit:
-  path: '/admin/config/services/constant_contact_mailout/connections/edit/{id}'
+  path: '/admin/config/constant_contact_mailout/connections/edit/{id}'
   defaults:
     _title: 'Edit connection'
     _form: '\Drupal\constant_contact_mailout\Form\AdminConnectionForm'
@@ -39,7 +39,7 @@ constant_contact_mailout.connections.edit:
     _admin_route: TRUE
 
 constant_contact_mailout.connections.delete:
-  path: '/admin/config/services/constant_contact_mailout/connections/delete/{id}'
+  path: '/admin/config/constant_contact_mailout/connections/delete/{id}'
   defaults:
     _title: 'Delete connection'
     _form: '\Drupal\constant_contact_mailout\Form\AdminDeleteConnectionForm'
@@ -50,7 +50,7 @@ constant_contact_mailout.connections.delete:
     _admin_route: TRUE
 
 constant_contact_mailout.connections.authorize:
-  path: '/admin/config/services/constant_contact_mailout/connections/authorize'
+  path: '/admin/config/constant_contact_mailout/connections/authorize'
   defaults:
     _title: 'Authorize connection'
     _controller: '\Drupal\constant_contact_mailout\Controller\ConnectionsController::authorize'
@@ -60,7 +60,7 @@ constant_contact_mailout.connections.authorize:
     _admin_route: TRUE
 
 constant_contact_mailout.settings:
-  path: '/admin/config/services/constant_contact_mailout/settings'
+  path: '/admin/config/constant_contact_mailout/settings'
   defaults:
     _form: '\Drupal\constant_contact_mailout\Form\AdminSettingsForm'
     _title: 'Settings'
