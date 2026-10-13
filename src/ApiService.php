@@ -435,9 +435,12 @@ class ApiService implements ContainerInjectionInterface {
       $subscribe_data['last_name'] = $data['last_name'];
     }
 
+    // Not retried on a transient failure. Constant Contact caps how often an
+    // address may attempt to subscribe, and a signup that times out has often
+    // been applied anyway, so a retry can spend an attempt to no benefit.
     $contact_response = $this->request($connection, function ($constantContact) use ($subscribe_data) {
       return $constantContact->contacts()->signup($subscribe_data);
-    }, TRUE);
+    });
 
     $contact_list_names = $this->getContactListNames($connection, $contact_list_ids);
     $success = !empty($contact_response) && !empty($contact_response['contact_id']);

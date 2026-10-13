@@ -456,7 +456,6 @@ class SubscribeBlockForm extends FormBase {
           // are logged per connection by the API service.
           $subscribed_lists = [];
           $failed_lists = [];
-          $errors = [];
 
           foreach (array_filter($results) as $result) {
             if (!empty($result['success'])) {
@@ -464,20 +463,21 @@ class SubscribeBlockForm extends FormBase {
             }
             else {
               $failed_lists = array_merge($failed_lists, $result['contact_list_names']);
-              $errors = array_merge($errors, $result['errors']);
             }
           }
 
           $subscribed_lists = array_unique($subscribed_lists);
           $failed_lists = array_unique($failed_lists);
-          $errors = array_unique(array_map('strval', $errors));
 
           if (empty($subscribed_message) && !empty($results)) {
+            // The API error is not repeated to the visitor. It describes the
+            // account rather than anything they can act on, and the most
+            // common one, a temporary block after repeated signups, reads as
+            // "Email address is invalid". The API service logs the detail.
             $arguments = [
               '@email_address' => $values['email'],
               '@subscribed_lists' => implode(', ', $subscribed_lists),
               '@failed_lists' => implode(', ', $failed_lists),
-              '@errors' => !empty($errors) ? rtrim(implode('. ', $errors), '.') . '.' : '',
             ];
 
             if (empty($failed_lists)) {
@@ -485,10 +485,10 @@ class SubscribeBlockForm extends FormBase {
             }
             elseif (empty($subscribed_lists)) {
               // Nothing succeeded, so naming the lists adds nothing.
-              $subscribed_message = $this->t('Could not subscribe @email_address. @errors', $arguments);
+              $subscribed_message = $this->t('Could not subscribe @email_address. Please try again later.', $arguments);
             }
             else {
-              $subscribed_message = $this->t('The @email_address email was only subscribed to @subscribed_lists. Could not subscribe to @failed_lists. @errors', $arguments);
+              $subscribed_message = $this->t('The @email_address email was only subscribed to @subscribed_lists. Could not subscribe to @failed_lists. Please try again later.', $arguments);
             }
 
             $subscribed_message = trim((string) $subscribed_message);

@@ -1083,9 +1083,13 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
             $value->setTimezone(new \DateTimeZone($timezone));
             $entity->$field_name->value = sprintf("%sT%s", $value->format('Y-m-d'), $value->format('H:i:s'));
 
-            $end_value = new \DateTime($entity->$field_name->end_value, new \DateTimeZone('UTC'));
-            $end_value->setTimezone(new \DateTimeZone($timezone));
-            $entity->$field_name->end_value = sprintf("%sT%s", $end_value->format('Y-m-d'), $end_value->format('H:i:s'));
+            // The end value is optional on a datetime field, and passing NULL
+            // to the DateTime constructor is deprecated as of PHP 8.1.
+            if (!empty($entity->$field_name->end_value)) {
+              $end_value = new \DateTime($entity->$field_name->end_value, new \DateTimeZone('UTC'));
+              $end_value->setTimezone(new \DateTimeZone($timezone));
+              $entity->$field_name->end_value = sprintf("%sT%s", $end_value->format('Y-m-d'), $end_value->format('H:i:s'));
+            }
           }
         }
       }
@@ -1175,9 +1179,16 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     // Create date.
     $datetime = new \DateTime('now');
 
+    // The Constant Contact API limits the campaign name to 80 characters and
+    // requires it to be unique. The name is internal to Constant Contact (it is
+    // not the email subject line the recipient sees), so truncate the subject
+    // portion to fit while keeping the timestamp for uniqueness.
+    $name_suffix = ' @ ' . $datetime->format('Y-m-d H:i:s');
+    $name = mb_substr($subject, 0, 80 - mb_strlen($name_suffix)) . $name_suffix;
+
     // Prepare email campaign data.
     $email_campaign_data = [
-      'name' => $subject . ' @ ' . $datetime->format('Y-m-d H:i:s'),
+      'name' => $name,
       'email_campaign_activities' => [
         [
           // Use 5 to create a custom code email.

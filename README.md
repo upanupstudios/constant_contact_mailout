@@ -123,6 +123,11 @@ single contact list for testing.
 When a node with the field is published, the mailout is sent to the resolved
 contact lists.
 
+Each mailout is created in Constant Contact as an email campaign named after
+the subject and the time it was sent. Constant Contact limits campaign names to
+80 characters, so a long subject is shortened in the campaign name. The subject
+line the recipient sees is not affected.
+
 ### Add the subscribe block
 
 1. Place the *Constant Contact Subscribe* block at Administration » Structure »
@@ -133,8 +138,10 @@ contact lists.
    checkbox, and set the messages shown after subscribing and unsubscribing.
 
 A submission that spans several connections is reported to the visitor as a
-single outcome. Per-connection failures are written to the log with the
-connection and contact list names.
+single outcome. When a subscription fails, the visitor is asked to try again
+later; the error returned by Constant Contact is not shown to them.
+Per-connection failures are written to the log with the connection and contact
+list names, along with the error.
 
 
 ## Troubleshooting
@@ -148,6 +155,12 @@ Connections page.
 message for several different conditions. The log records the error key
 alongside the message, in square brackets, which identifies the actual
 condition. Enable **Debug** under the Settings tab for more detail.
+
+**The log reports "Email address is invalid" for an address that is valid.**
+Constant Contact limits how often an address may attempt to subscribe, and
+reports the temporary block that follows repeated signups with this message.
+Wait before trying the address again. For the same reason a failed signup is
+not retried automatically.
 
 **Contact lists are missing or out of date.** Lists are cached with the
 connection and refreshed when the access token is refreshed on cron. Run cron,
