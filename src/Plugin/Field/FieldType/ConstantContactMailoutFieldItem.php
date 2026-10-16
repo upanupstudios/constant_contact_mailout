@@ -2,6 +2,7 @@
 
 namespace Drupal\constant_contact_mailout\Plugin\Field\FieldType;
 
+use Drupal\constant_contact_mailout\EventSubscriber\DebugTemplateSubscriber;
 use Drupal\constant_contact_mailout\Utility\TextHelper;
 use Drupal\Core\Field\FieldItemBase;
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
@@ -767,6 +768,22 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
 
         $template = $this->prepareTemplate($entity, $update);
 
+        if (!empty($settings->get('debug_render_template'))) {
+          // Stash the template on the request; the debug template subscriber
+          // serves it in place of the form response. Printing it and exiting
+          // here would abort the rest of the entity save, and throwing an
+          // EnforcedResponseException does not work either: NodeForm's save()
+          // catches \Exception, so it is logged as a failed save and never
+          // reaches the kernel.
+          $request = \Drupal::requestStack()->getCurrentRequest();
+
+          if ($request) {
+            $request->attributes->set(DebugTemplateSubscriber::REQUEST_ATTRIBUTE, $template);
+          }
+
+          return;
+        }
+
         $connection = NULL;
 
         if (!empty($debug_sendto_contact_list)) {
@@ -1132,11 +1149,10 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
   /**
    * {@inheritdoc}
    */
-  public function sendMailout($connection, $contact_list_ids, $entity, $template, $debug_render_template = FALSE) {
+  public function sendMailout($connection, $contact_list_ids, $entity, $template) {
     // Get settings.
     $settings = \Drupal::config('constant_contact_mailout.settings');
     $connections = $settings->get('connections');
-    $debug_render_template = $settings->get('debug_render_template');
 
     // Get entity properties.
     $title = $entity->getTitle();
@@ -1202,106 +1218,86 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       ],
     ];
 
-    if ($debug_render_template) {
-      echo $template;
-      die();
-    }
-    else {
-      // Create an email campaign and campaign activities.
-      // Returns primary email and email campaign activity id.
-      $email_campaign_response = $api->createEmailCampaigns($connection, $email_campaign_data);
+    // Create an email campaign and campaign activities.
+    // Returns primary email and email campaign activity id.
+    $email_campaign_response = $api->createEmailCampaigns($connection, $email_campaign_data);
 
-      if (!empty($email_campaign_response) && !empty($email_campaign_response['campaign_id'])) {
-        // Get email campaign data.
-        $email_campaign_acitivity_data = $email_campaign_data['email_campaign_activities'][0];
+    if (!empty($email_campaign_response) && !empty($email_campaign_response['campaign_id'])) {
+      // Get email campaign data.
+      $email_campaign_acitivity_data = $email_campaign_data['email_campaign_activities'][0];
 
-        // Update the email campaign activity and add recipients.
-        $campaign_activity_id = $email_campaign_response['campaign_activities'][0]['campaign_activity_id'];
+      // Update the email campaign activity and add recipients.
+      $campaign_activity_id = $email_campaign_response['campaign_activities'][0]['campaign_activity_id'];
 
-        // Add campaign activity id, role and contact list ids.
-        $email_campaign_acitivity_data['campaign_activity_id'] = $campaign_activity_id;
-        $email_campaign_acitivity_data['role'] = $email_campaign_response['campaign_activities'][0]['role'];
-        $email_campaign_acitivity_data['contact_list_ids'] = array_values($contact_list_ids);
+      // Add campaign activity id, role and contact list ids.
+      $email_campaign_acitivity_data['campaign_activity_id'] = $campaign_activity_id;
+      $email_campaign_acitivity_data['role'] = $email_campaign_response['campaign_activities'][0]['role'];
+      $email_campaign_acitivity_data['contact_list_ids'] = array_values($contact_list_ids);
 
-        $email_campaign_activity_response = $api->updateEmailCampaignActivities($connection, $campaign_activity_id, $email_campaign_acitivity_data);
+      $email_campaign_activity_response = $api->updateEmailCampaignActivities($connection, $campaign_activity_id, $email_campaign_acitivity_data);
 
-        if (!empty($email_campaign_activity_response) && !empty($email_campaign_activity_response['campaign_activity_id'])) {
-          $schedule_data = NULL;
+      if (!empty($email_campaign_activity_response) && !empty($email_campaign_activity_response['campaign_activity_id'])) {
+        $schedule_data = NULL;
 
-          // Schedule the email campaign activity.
-          if (!empty($this->sendnow)) {
-            $schedule_data = [
-              'scheduled_date' => 0,
-            ];
+        // Schedule the email campaign activity.
+        if (!empty($this->sendnow)) {
+          $schedule_data = [
+            'scheduled_date' => 0,
+          ];
 
-            $message = 'The "@subject" has been sent now to @contact_list_names contact lists.';
-          }
-          elseif (!empty($this->sendlater) && !empty($this->sendlater_datetime)) {
-            $datetime = new \DateTime($this->sendlater_datetime['object']->__toString());
+          $message = 'The "@subject" has been sent now to @contact_list_names contact lists.';
+        }
+        elseif (!empty($this->sendlater) && !empty($this->sendlater_datetime)) {
+          $datetime = new \DateTime($this->sendlater_datetime['object']->__toString());
 
-            // Use ISO-8601 format.
-            $schedule_data = [
-              'scheduled_date' => $datetime->format('c'),
-            ];
+          // Use ISO-8601 format.
+          $schedule_data = [
+            'scheduled_date' => $datetime->format('c'),
+          ];
 
-            $message = 'The "@subject" will be sent on @date to @contact_list_names contact lists.';
-          }
+          $message = 'The "@subject" will be sent on @date to @contact_list_names contact lists.';
+        }
 
-          $email_campaign_activity_schedule_response = $api->scheduleEmailCampaignActivities($connection, $campaign_activity_id, $schedule_data);
+        $email_campaign_activity_schedule_response = $api->scheduleEmailCampaignActivities($connection, $campaign_activity_id, $schedule_data);
 
-          if ((empty($email_campaign_activity_schedule_response) && $schedule_data['scheduled_date'] == 0) || (!empty($email_campaign_activity_schedule_response) && !empty($email_campaign_activity_schedule_response[0]['scheduled_date']))) {
-            $contact_list_names = [];
+        if ((empty($email_campaign_activity_schedule_response) && $schedule_data['scheduled_date'] == 0) || (!empty($email_campaign_activity_schedule_response) && !empty($email_campaign_activity_schedule_response[0]['scheduled_date']))) {
+          $contact_list_names = [];
 
-            // Do I need this here??
-            if (!empty($connections)) {
-              foreach ($connections as $connection) {
-                if (!empty($connection['lists'])) {
-                  foreach ($connection['lists'] as $list) {
-                    if (in_array($list['list_id'], $contact_list_ids)) {
-                      $contact_list_names[$list['list_id']] = $list['name'];
-                    }
+          // Do I need this here??
+          if (!empty($connections)) {
+            foreach ($connections as $connection) {
+              if (!empty($connection['lists'])) {
+                foreach ($connection['lists'] as $list) {
+                  if (in_array($list['list_id'], $contact_list_ids)) {
+                    $contact_list_names[$list['list_id']] = $list['name'];
                   }
                 }
               }
             }
-
-            $message = $this->t($message, [
-              '@subject' => $subject,
-              '@date' => $datetime->format('F j, Y g:ia'),
-              '@contact_list_names' => implode(', ', $contact_list_names),
-            ]);
-
-            // @todo Get total number of subscribers.
-            \Drupal::logger('constant_contact_mailout')->notice($message);
-            \Drupal::messenger()->addStatus($message);
           }
-          else {
-            // Additional message for clarity.
-            $message = $this->t('Constant Contact: Unable to schedule the email campaign activity.');
-            \Drupal::logger('constant_contact_mailout')->error($message);
 
-            // Return actual response for debugging.
-            $message = $this->t('Constant Contact: @errors', [
-              '@errors' => print_r($email_campaign_activity_schedule_response, TRUE),
-            ]);
-            \Drupal::logger('constant_contact_mailout')->error($message);
+          $message = $this->t($message, [
+            '@subject' => $subject,
+            '@date' => $datetime->format('F j, Y g:ia'),
+            '@contact_list_names' => implode(', ', $contact_list_names),
+          ]);
 
-            $errors = $api->processErrorResponse($email_campaign_activity_schedule_response);
-
-            $message = $this->t('Constant Contact: @errors', [
-              '@errors' => implode('. ', $errors),
-            ]);
-
-            \Drupal::logger('constant_contact_mailout')->error($message);
-            \Drupal::messenger()->addError($message);
-          }
+          // @todo Get total number of subscribers.
+          \Drupal::logger('constant_contact_mailout')->notice($message);
+          \Drupal::messenger()->addStatus($message);
         }
         else {
           // Additional message for clarity.
-          $message = $this->t('Constant Contact: Unable to update the email campaign activity.');
+          $message = $this->t('Constant Contact: Unable to schedule the email campaign activity.');
           \Drupal::logger('constant_contact_mailout')->error($message);
 
-          $errors = $api->processErrorResponse($email_campaign_activity_response);
+          // Return actual response for debugging.
+          $message = $this->t('Constant Contact: @errors', [
+            '@errors' => print_r($email_campaign_activity_schedule_response, TRUE),
+          ]);
+          \Drupal::logger('constant_contact_mailout')->error($message);
+
+          $errors = $api->processErrorResponse($email_campaign_activity_schedule_response);
 
           $message = $this->t('Constant Contact: @errors', [
             '@errors' => implode('. ', $errors),
@@ -1313,18 +1309,32 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       }
       else {
         // Additional message for clarity.
-        $message = $this->t('Constant Contact: Unable to create the email campaign.');
+        $message = $this->t('Constant Contact: Unable to update the email campaign activity.');
         \Drupal::logger('constant_contact_mailout')->error($message);
 
-        $errors = $api->processErrorResponse($email_campaign_response);
+        $errors = $api->processErrorResponse($email_campaign_activity_response);
 
-        $message = t('Constant Contact: @errors', [
+        $message = $this->t('Constant Contact: @errors', [
           '@errors' => implode('. ', $errors),
         ]);
 
         \Drupal::logger('constant_contact_mailout')->error($message);
         \Drupal::messenger()->addError($message);
       }
+    }
+    else {
+      // Additional message for clarity.
+      $message = $this->t('Constant Contact: Unable to create the email campaign.');
+      \Drupal::logger('constant_contact_mailout')->error($message);
+
+      $errors = $api->processErrorResponse($email_campaign_response);
+
+      $message = t('Constant Contact: @errors', [
+        '@errors' => implode('. ', $errors),
+      ]);
+
+      \Drupal::logger('constant_contact_mailout')->error($message);
+      \Drupal::messenger()->addError($message);
     }
   }
 

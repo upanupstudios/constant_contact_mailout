@@ -2,3 +2,8 @@ services:
   constant_contact_mailout.api:
     class: Drupal\constant_contact_mailout\ApiService
     arguments: ['@config.factory', '@logger.factory', '@messenger']
+
+  constant_contact_mailout.debug_template_subscriber:
+    class: Drupal\constant_contact_mailout\EventSubscriber\DebugTemplateSubscriber
+    tags:
+      - { name: event_subscriber }
