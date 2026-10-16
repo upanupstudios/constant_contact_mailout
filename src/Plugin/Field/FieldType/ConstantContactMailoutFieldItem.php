@@ -999,7 +999,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       else {
         $url = Url::fromRoute('constant_contact_mailout.connections');
 
-        $message = $this->t('Contant Contact: There are no connections! Add @constant_contact_connections.', [
+        $message = $this->t('Constant Contact: There are no connections! Add @constant_contact_connections.', [
           '@constant_contact_connections' => Link::fromTextAndUrl($this->t('connections'), $url)->toString(),
         ]);
 

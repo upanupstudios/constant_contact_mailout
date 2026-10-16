@@ -71,7 +71,7 @@ class ConstantContactMailoutWidget extends WidgetBase {
       }
 
       if (!empty($debug_render_template)) {
-        $message = $this->t('Contant Contact: Render email template on screen when publishing a node is enabled when sending a mailout. Change in @constant_contact_settings.', [
+        $message = $this->t('Constant Contact: Render email template on screen when publishing a node is enabled when sending a mailout. Change in @constant_contact_settings.', [
           '@constant_contact_settings' => Link::fromTextAndUrl($this->t('Constant Contact settings'), $url)->toString(),
         ]);
 
@@ -79,7 +79,7 @@ class ConstantContactMailoutWidget extends WidgetBase {
       }
 
       if (!empty($debug_sendto_contact_list)) {
-        $message = $this->t('Contant Contact: Mailout will be sent to @contact_list_names contact lists. Change in @constant_contact_settings.', [
+        $message = $this->t('Constant Contact: Mailout will be sent to @contact_list_names contact lists. Change in @constant_contact_settings.', [
           '@contact_list_names' => implode(', ', $contact_list_names),
           '@constant_contact_settings' => Link::fromTextAndUrl($this->t('Constant Contact settings'), $url)->toString(),
         ]);
