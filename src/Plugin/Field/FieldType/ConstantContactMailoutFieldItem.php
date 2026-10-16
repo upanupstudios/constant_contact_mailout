@@ -240,17 +240,31 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
 
                 if ($settings['target_type'] == 'taxonomy_term') {
                   // Get the first target handler.
-                  $taget_bundle = reset($settings['handler_settings']['target_bundles']);
-                  $vocabulary = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->load($taget_bundle);
+                  $target_bundle = $this->getFirstTargetBundle($settings);
 
-                  $vocabularies[$taget_bundle] = $vocabulary->label();
+                  if ($target_bundle === NULL) {
+                    continue;
+                  }
+
+                  $vocabulary = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->load($target_bundle);
+
+                  if ($vocabulary) {
+                    $vocabularies[$target_bundle] = $vocabulary->label();
+                  }
                 }
                 elseif ($settings['target_type'] == 'node') {
                   // Get the first target handler.
-                  $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                  $target_bundle = $this->getFirstTargetBundle($settings);
+
+                  if ($target_bundle === NULL) {
+                    continue;
+                  }
+
                   $node_type = \Drupal::entityTypeManager()->getStorage('node_type')->load($target_bundle);
 
-                  $node_types[$target_bundle] = $node_type->label();
+                  if ($node_type) {
+                    $node_types[$target_bundle] = $node_type->label();
+                  }
                 }
               }
             }
@@ -635,7 +649,11 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                 $settings = $definition->getSettings();
 
                 if (!empty($settings['target_type']) && $settings['target_type'] == 'node') {
-                  $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                  $target_bundle = $this->getFirstTargetBundle($settings);
+
+                  if ($target_bundle === NULL) {
+                    continue;
+                  }
 
                   if (in_array($target_bundle, $node_types)) {
                     // Get field machine name.
@@ -877,7 +895,11 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                   $settings = $definition->getSettings();
 
                   if (!empty($settings['target_type']) && $settings['target_type'] == 'taxonomy_term') {
-                    $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                    $target_bundle = $this->getFirstTargetBundle($settings);
+
+                    if ($target_bundle === NULL) {
+                      continue;
+                    }
 
                     if (in_array($target_bundle, $vocabularies)) {
                       // Get field machine name.
@@ -931,7 +953,11 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
                   $settings = $definition->getSettings();
 
                   if (!empty($settings['target_type']) && $settings['target_type'] == 'node') {
-                    $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                    $target_bundle = $this->getFirstTargetBundle($settings);
+
+                    if ($target_bundle === NULL) {
+                      continue;
+                    }
 
                     if (in_array($target_bundle, $node_types)) {
                       // Get field machine name.
@@ -1336,6 +1362,26 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       \Drupal::logger('constant_contact_mailout')->error($message);
       \Drupal::messenger()->addError($message);
     }
+  }
+
+  /**
+   * Gets the first target bundle of an entity reference field.
+   *
+   * @param array $settings
+   *   The entity reference field settings.
+   *
+   * @return string|null
+   *   The first target bundle, or NULL if the field has no target bundles,
+   *   e.g. when it references all bundles.
+   */
+  protected function getFirstTargetBundle(array $settings): ?string {
+    $target_bundles = $settings['handler_settings']['target_bundles'] ?? NULL;
+
+    if (empty($target_bundles) || !is_array($target_bundles)) {
+      return NULL;
+    }
+
+    return (string) reset($target_bundles);
   }
 
 }
