@@ -44,6 +44,26 @@
       if (once('constant-contact-mailout-widget', '.sendnow-checkbox', context).length) {
         init();
       }
+
+      // Change-list checkbox: shows/hides the contact list select.
+      $(once('ccm-widget-change-list', '.change-list-checkbox', context)).each(function () {
+        var $self = $(this);
+        var $select = $('.change-list-contact_list_id').closest('.form-item');
+
+        if ($self.is(':checked')) {
+          $select.show();
+        } else {
+          $select.hide();
+        }
+
+        $self.on('change', function () {
+          if ($self.is(':checked')) {
+            $select.show();
+          } else {
+            $select.hide();
+          }
+        });
+      });
     }
   };
 }(jQuery, Drupal, once));

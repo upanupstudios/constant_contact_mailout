@@ -92,12 +92,12 @@ class ConstantContactMailoutWidget extends WidgetBase {
       }
       else {
         if ($contact_list_creation == 'dynamic') {
-          $element['contact_list_id'] = [
-            '#type' => 'hidden',
-            '#value' => $items[$delta]->contact_list_id,
-          ];
-
           if ($items->getEntity()->isNew()) {
+            $element['contact_list_id'] = [
+              '#type' => 'hidden',
+              '#value' => $items[$delta]->contact_list_id,
+            ];
+
             $description = $this->t('The contact list will be dynamically created, if it does not exist. Mailout will be sent to the subscribers for this content.');
           }
           else {
@@ -111,9 +111,14 @@ class ConstantContactMailoutWidget extends WidgetBase {
               }
             }
 
-            $description = $this->t('Mailout will be sent to the @contact_list_names contact list.', [
-              '@contact_list_names' => implode(', ', $contact_list_names),
-            ]);
+            if (!empty($contact_list_names)) {
+              $description = $this->t('Mailout will be sent to the @contact_list_names contact list.', [
+                '@contact_list_names' => implode(', ', $contact_list_names),
+              ]);
+            }
+            else {
+              $description = $this->t('The contact list will be dynamically created, if it does not exist. Mailout will be sent to the subscribers for this content.');
+            }
           }
         }
         elseif ($contact_list_creation == 'select') {
@@ -294,6 +299,56 @@ class ConstantContactMailoutWidget extends WidgetBase {
             }
           }
         }
+        elseif ($contact_list_creation == 'dynamic' && !$items->getEntity()->isNew()) {
+          $current_contact_list_id = $items[$delta]->contact_list_id;
+          $options = [];
+
+          foreach ($contact_lists as $name => $lists) {
+            foreach ($lists as $contact_list_id => $contact_list_name) {
+              $options[$name][$contact_list_id] = $contact_list_name->__toString();
+            }
+
+            // Sort options by name.
+            asort($options[$name]);
+          }
+
+          // Keep the stored contact list selectable even if it is no longer
+          // in the connection lists, otherwise the form fails validation.
+          if (!empty($current_contact_list_id) && empty($contact_list_names)) {
+            $options[$this->t('Current')->__toString()][$current_contact_list_id] = $current_contact_list_id;
+          }
+
+          $element['change_list'] = [
+            '#title' => $this->t('Change contact list to send mailout to'),
+            '#type' => 'checkbox',
+            '#attributes' => [
+              'class' => [
+                'change-list-checkbox',
+              ],
+            ],
+          ];
+
+          $element['contact_list_id'] = [
+            '#title' => $this->t('Contact list'),
+            '#type' => 'select',
+            '#options' => $options,
+            '#empty_value' => '',
+            '#empty_option' => $this->t('- None -'),
+            '#default_value' => $current_contact_list_id,
+            '#attributes' => [
+              'class' => [
+                'change-list-contact_list_id',
+              ],
+            ],
+          ];
+
+          // Stored contact list ID, restored in massageFormValues() when the
+          // change list checkbox is not ticked.
+          $element['contact_list_id_original'] = [
+            '#type' => 'value',
+            '#value' => $current_contact_list_id,
+          ];
+        }
       }
 
       if (!empty($this->getFieldSetting('scheduled_mailout'))) {
@@ -332,6 +387,26 @@ class ConstantContactMailoutWidget extends WidgetBase {
     }
 
     return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function massageFormValues(array $values, array $form, FormStateInterface $form_state) {
+    foreach ($values as &$value) {
+      if (array_key_exists('contact_list_id_original', $value)) {
+        // Keep the stored contact list unless the editor chose to change it.
+        if (empty($value['change_list'])) {
+          $value['contact_list_id'] = $value['contact_list_id_original'];
+        }
+
+        unset($value['contact_list_id_original']);
+      }
+
+      unset($value['change_list']);
+    }
+
+    return $values;
   }
 
   /**

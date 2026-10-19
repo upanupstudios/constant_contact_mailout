@@ -111,7 +111,10 @@ single contact list for testing.
    - **Dynamic** — send to a contact list created for each entity of this
      content type, using a connection and a contact list prefix. Lists are
      created when the entity is created; they are not deleted when the entity
-     is deleted.
+     is deleted. When editing an existing entity, editors can tick *Change
+     contact list to send mailout to* and pick another list from the
+     connections; the new list is saved on the entity and used for this and
+     later mailouts. Leave the box unticked to keep the current list.
    - **Select** — send to the contact lists selected for all entities of this
      content type.
    - **Taxonomy** — send to contact lists mapped from the terms of the selected
