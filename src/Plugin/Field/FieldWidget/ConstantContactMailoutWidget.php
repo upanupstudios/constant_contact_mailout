@@ -260,7 +260,7 @@ class ConstantContactMailoutWidget extends WidgetBase {
         '#title' => $this->getFieldSetting('sendnow_label'),
         '#description' => $description,
         '#type' => 'checkbox',
-        '#default_value' => $items->getEntity()->isNew() && !empty($default_value[$delta]['sendnow']),
+        '#default_value' => !empty($default_value[$delta]['sendnow']),
         '#value_callback' => [static::class, 'sendnowValue'],
         '#attributes' => [
           'class' => [

@@ -137,7 +137,7 @@ class SendNowDefaultValueTest extends KernelTestBase {
   }
 
   /**
-   * A checked "send now" default is saved and pre-checks new entity forms.
+   * A checked "send now" default is saved and pre-checks entity forms.
    */
   public function testSendNowDefaultIsSaved(): void {
     $field = $this->submitFieldSettings(['sendnow' => 1]);
@@ -149,9 +149,9 @@ class SendNowDefaultValueTest extends KernelTestBase {
     // The default never becomes an item value, so saving in code cannot send.
     $this->assertNull($node->get(static::FIELD_NAME)->sendnow);
 
-    // Existing entities are never pre-checked.
+    // Existing entities are pre-checked too.
     $node->save();
-    $this->assertFalse($this->buildWidget($node)['sendnow']['#default_value']);
+    $this->assertTrue($this->buildWidget($node)['sendnow']['#default_value']);
   }
 
   /**
