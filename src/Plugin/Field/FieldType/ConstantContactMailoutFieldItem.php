@@ -19,7 +19,8 @@ use Drupal\field\FieldConfigInterface;
  *   id = "constant_contact_mailout",
  *   label = @Translation("Constant Contact mailout"),
  *   description = @Translation("Allows an entity to send an email to subscribers through Constant Contact API."),
- *   default_widget = "constant_contact_mailout_default"
+ *   default_widget = "constant_contact_mailout_default",
+ *   list_class = "\Drupal\constant_contact_mailout\Plugin\Field\FieldType\ConstantContactMailoutFieldItemList"
  * )
  */
 class ConstantContactMailoutFieldItem extends FieldItemBase {

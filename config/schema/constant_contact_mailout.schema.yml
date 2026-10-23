@@ -136,6 +136,9 @@ field.value.constant_contact_mailout:
     contact_list_id:
       type: string
       label: 'Contact list ID'
+    sendnow:
+      type: boolean
+      label: 'Send mailout now by default'
 
 field.widget.settings.constant_contact_mailout_default:
   type: mapping

@@ -3,12 +3,14 @@
 namespace Drupal\constant_contact_mailout\Plugin\Field\FieldWidget;
 
 use Drupal\constant_contact_mailout\Utility\TextHelper;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
+use Drupal\Core\Render\Element\Checkbox;
 use Drupal\Core\Url;
 
 /**
@@ -250,10 +252,16 @@ class ConstantContactMailoutWidget extends WidgetBase {
         $description = $this->getFieldSetting('sendnow_description');
       }
 
+      // The default is read from the field definition, because it is kept out
+      // of the item values. See ConstantContactMailoutFieldItemList.
+      $default_value = $this->fieldDefinition->getDefaultValueLiteral();
+
       $element['sendnow'] = [
         '#title' => $this->getFieldSetting('sendnow_label'),
         '#description' => $description,
         '#type' => 'checkbox',
+        '#default_value' => $items->getEntity()->isNew() && !empty($default_value[$delta]['sendnow']),
+        '#value_callback' => [static::class, 'sendnowValue'],
         '#attributes' => [
           'class' => [
             'sendnow-checkbox',
@@ -407,6 +415,23 @@ class ConstantContactMailoutWidget extends WidgetBase {
     }
 
     return $values;
+  }
+
+  /**
+   * Value callback for the "send now" checkbox.
+   *
+   * An inaccessible checkbox takes its #default_value, so a pre-checked "send
+   * now" default would send a mailout for editors who cannot see the field.
+   * Elements inherit #access from their parents while the form is built.
+   */
+  public static function sendnowValue(&$element, $input, FormStateInterface $form_state) {
+    $access = $element['#access'] ?? TRUE;
+
+    if ($access instanceof AccessResultInterface ? !$access->isAllowed() : $access !== TRUE) {
+      return 0;
+    }
+
+    return Checkbox::valueCallback($element, $input, $form_state);
   }
 
   /**

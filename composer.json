@@ -12,6 +12,9 @@
   "require": {
     "upanupstudios/constantcontact-php-client": "^1.0"
   },
+  "require-dev": {
+    "drupal/token": "^1.13"
+  },
   "autoload": {
     "psr-0": {
       "ConstantContact": "src/"

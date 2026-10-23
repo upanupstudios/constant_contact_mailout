@@ -122,6 +122,11 @@ single contact list for testing.
    - **Reference** — send to the contact lists of an entity reference from this
      content type.
 3. Optionally allow editors to select the contact lists before sending.
+4. Optionally tick *Set default value* and the send now checkbox to have it
+   ticked by default on the add form. The default only applies to new entities
+   when an editor can see the checkbox: editing an existing entity, creating
+   one in code (Feeds, migrations, ECA), or an editor without access to the
+   field never sends a mailout from the default.
 
 When a node with the field is published, the mailout is sent to the resolved
 contact lists.
