@@ -161,8 +161,10 @@ class ConstantContactMailoutWidget extends WidgetBase {
                   if ($definition->getType() == 'entity_reference') {
                     $settings = $definition->getSettings();
 
-                    if ($settings['target_type'] == 'node') {
-                      $target_bundle = reset($settings['handler_settings']['target_bundles']);
+                    // Views-based selection handlers have no target_bundles.
+                    if ($settings['target_type'] == 'node' && !empty($settings['handler_settings']['target_bundles'])) {
+                      $target_bundles = $settings['handler_settings']['target_bundles'];
+                      $target_bundle = reset($target_bundles);
 
                       if (in_array($target_bundle, $node_types)) {
                         // Get field machine name.
