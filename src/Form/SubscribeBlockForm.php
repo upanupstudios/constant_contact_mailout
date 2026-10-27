@@ -190,8 +190,8 @@ class SubscribeBlockForm extends FormBase {
 
             $id = TextHelper::textToMachineName($group);
 
-            // Add select all in the group if there is only 1.
-            if (count($contact_lists) == 1) {
+            // Add select all in the group if there is only 1. Show if enabled.
+            if (count($contact_lists) == 1 && !empty($settings['show_select_all'])) {
               $list = array_merge(['all' => $this->t('Select all')], $list);
             }
 

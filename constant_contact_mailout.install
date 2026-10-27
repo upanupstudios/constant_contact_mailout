@@ -141,3 +141,44 @@ function constant_contact_mailout_update_10002(&$sandbox) {
 
   return t('The Constant Contact Mailout administration pages moved out of /admin/config/services. Update the Redirect URI of the Constant Contact application for each of these connections to @path on this site: @names. Until then, authorizing or re-authorizing a connection will fail. The exact URL to enter is shown when editing a connection.', $arguments);
 }
+
+/**
+ * Show the name and email fields on subscribe blocks that have none enabled.
+ *
+ * Before the "Fields" setting was added, the subscribe form always showed
+ * first name, last name, email and confirm email. Blocks saved by those
+ * versions have no fields enabled, so the form renders without an email field
+ * and nobody can subscribe. The block form requires at least one field, so an
+ * empty value only comes from an older block.
+ */
+function constant_contact_mailout_update_10003(&$sandbox) {
+  $fields = ['first_name', 'last_name', 'email', 'confirm_email'];
+
+  $block_storage = \Drupal::entityTypeManager()->getStorage('block');
+  $updated_blocks = 0;
+
+  foreach ($block_storage->loadMultiple() as $block) {
+    if ($block->getPluginId() !== 'constant_contact_mailout_subscribe_block') {
+      continue;
+    }
+
+    $block_settings = $block->get('settings');
+
+    if (!empty($block_settings['fields'])) {
+      continue;
+    }
+
+    $block_settings['fields'] = array_combine($fields, $fields);
+    $block->set('settings', $block_settings);
+    $block->save();
+    $updated_blocks++;
+  }
+
+  if ($updated_blocks == 0) {
+    return t('All Constant Contact Subscribe blocks already have fields enabled.');
+  }
+
+  return t('Enabled the first name, last name, email and confirm email fields on @count Constant Contact Subscribe block(s).', [
+    '@count' => $updated_blocks,
+  ]);
+}
