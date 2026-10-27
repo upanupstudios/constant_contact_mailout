@@ -225,7 +225,7 @@ class SubscribeBlockForm extends FormBase {
         ],
         '#validate' => [],
         '#ajax' => [
-          'callback' => [$this, 'submitFormCallback'],
+          'callback' => '::submitFormCallback',
           'event' => 'click',
         ],
       ],
