@@ -128,6 +128,11 @@ single contact list for testing.
    it for edits that should not be mailed out. Creating an entity in code
    (Feeds, migrations, ECA) or an editor without access to the field never
    sends a mailout from the default.
+5. Optionally tick **Enable additional mailout details** to add a rich-text
+   *Mailout Details* editor to the node form. What the editor enters is sent
+   with that mailout only; it is not saved on the node. The email template
+   receives it as the `details` variable, with `value` and `format` keys, so
+   a theme's `constant_contact_mailout_TYPE.html.twig` can print it too.
 
 When a node with the field is published, the mailout is sent to the resolved
 contact lists.
@@ -174,6 +179,21 @@ not retried automatically.
 **Contact lists are missing or out of date.** Lists are cached with the
 connection and refreshed when the access token is refreshed on cron. Run cron,
 or re-authorize the connection.
+
+
+## Testing
+
+Kernel tests live under [`tests/src/Kernel`](tests/src/Kernel). They need
+Drupal core and the Token module, so run them from a site that has this module
+installed, from the directory that contains `vendor/`:
+
+```sh
+SIMPLETEST_DB=sqlite://localhost//tmp/test.sqlite \
+  vendor/bin/phpunit -c "$PWD/web/core/phpunit.xml.dist" \
+  web/modules/contrib/constant_contact_mailout/tests
+```
+
+Pass `-c` an absolute path: Drupal's bootstrap changes into `web/` first.
 
 
 ## Maintainers

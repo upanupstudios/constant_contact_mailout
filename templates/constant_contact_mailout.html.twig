@@ -90,6 +90,11 @@
 						{% endfor %}
 					{% endif %}
 
+					{% if details is not empty %}
+						{% set details = details.value|striptags|replace({"&nbsp;": " ", "&amp;": "&"}) %}
+						<p>{{ details }}</p>
+					{% endif %}
+
 					{% set url = url('entity.node.canonical', {'node': entity.id}) %}
 					<p style="margin:40px 0;"><a href="{{ url }}" style="color:#0b5b28;padding: 19px 24px;line-height: 1.2em;text-decoration: none;text-transform: uppercase;border: 1px solid #000;-webkit-border-radius: 32px;-moz-border-radius: 32px;border-radius: 32px;padding-top: 12px;padding-bottom: 12px;text-decoration:none;">Read</a></p>
 				</td>

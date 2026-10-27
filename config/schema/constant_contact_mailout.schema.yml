@@ -128,6 +128,9 @@ field.field_settings.constant_contact_mailout:
     scheduled_mailout_description:
       type: label
       label: 'Scheduled mailout description'
+    include_details:
+      type: boolean
+      label: 'Enable additional mailout details'
 
 field.value.constant_contact_mailout:
   type: mapping

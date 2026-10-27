@@ -52,6 +52,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       'scheduled_mailout' => FALSE,
       'scheduled_mailout_label' => 'Schedule mailout to subscribers later',
       'scheduled_mailout_description' => NULL,
+      'include_details' => FALSE,
     ] + parent::defaultFieldSettings();
   }
 
@@ -446,6 +447,13 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
         '#default_value' => $this->getSetting('scheduled_mailout_description'),
         '#description' => $this->t('Use [contact_list_names] to display names of contact lists.'),
       ];
+
+      $element['constant_contact']['include_details'] = [
+        '#title' => $this->t('Enable additional mailout details'),
+        '#type' => 'checkbox',
+        '#default_value' => $this->getSetting('include_details'),
+        '#description' => $this->t("Add additional details to be sent with the mailout."),
+      ];
     }
     else {
       $url = Url::fromRoute('constant_contact_mailout.connections');
@@ -545,6 +553,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
     $form_state->setValue(['settings', 'scheduled_mailout'], $settings['scheduled_mailout']);
     $form_state->setValue(['settings', 'scheduled_mailout_label'], $settings['scheduled_mailout_label']);
     $form_state->setValue(['settings', 'scheduled_mailout_description'], $settings['scheduled_mailout_description']);
+    $form_state->setValue(['settings', 'include_details'], (bool) $settings['include_details']);
   }
 
   /**
@@ -785,7 +794,14 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       if (!empty($connections)) {
         $debug_sendto_contact_list = $settings->get('debug_sendto_contact_list');
 
-        $template = $this->prepareTemplate($entity, $update);
+        // Details.
+        $details = NULL;
+
+        if (!empty($this->mailout_details['value'])) {
+          $details = $this->mailout_details;
+        }
+
+        $template = $this->prepareTemplate($entity, $update, $details);
 
         if (!empty($settings->get('debug_render_template'))) {
           // Stash the template on the request; the debug template subscriber
@@ -1101,7 +1117,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
   /**
    * {@inheritdoc}
    */
-  public function prepareTemplate($entity, $update) {
+  public function prepareTemplate($entity, $update, $details = NULL) {
     // Get the default theme and change it back to active rendering.
     $config = \Drupal::config('system.theme');
     $default_theme = \Drupal::service('theme.initialization')->getActiveThemeByName($config->get('default'));
@@ -1150,6 +1166,7 @@ class ConstantContactMailoutFieldItem extends FieldItemBase {
       '#theme' => 'constant_contact_mailout',
       '#is_new' => !$update,
       '#entity' => $entity,
+      '#details' => $details,
       '#theme_settings' => $theme_settings,
     ];
 

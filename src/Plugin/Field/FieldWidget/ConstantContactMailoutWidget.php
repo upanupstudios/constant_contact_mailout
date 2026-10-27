@@ -385,6 +385,21 @@ class ConstantContactMailoutWidget extends WidgetBase {
           ],
         ];
       }
+
+      // Details belong to a single mailout, so they have no default value.
+      if (!empty($this->getFieldSetting('include_details')) && !$this->isDefaultValueWidget($form_state)) {
+        $element['mailout_details'] = [
+          '#title' => $this->t('Mailout Details'),
+          '#description' => $this->t("Add additional details to be sent with the mailout."),
+          '#type' => 'text_format',
+          '#allowed_formats' => ['basic_html', 'restricted_html'],
+          '#attributes' => [
+            'class' => [
+              'mailout-details-text',
+            ],
+          ],
+        ];
+      }
     }
     else {
       $url = Url::fromRoute('constant_contact_mailout.connections');

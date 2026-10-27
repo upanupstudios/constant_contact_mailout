@@ -74,6 +74,7 @@ function constant_contact_mailout_theme($existing, $type, $theme, $path) {
       'variables' => [
         'is_new' => NULL,
         'entity' => NULL,
+        'details' => NULL,
         'theme_settings' => NULL,
       ],
       'template' => 'constant_contact_mailout',
@@ -107,6 +108,7 @@ function constant_contact_mailout_theme($existing, $type, $theme, $path) {
               'variables' => [
                 'is_new' => NULL,
                 'entity' => NULL,
+                'details' => NULL,
                 'theme_settings' => NULL,
               ],
               'template' => 'constant_contact_mailout_' . $bundle,
