@@ -129,7 +129,7 @@ class SubscribeBlockForm extends FormBase {
     if (!empty($settings['show_contact_lists'])) {
       $connections = $this->settings->get('connections');
       $contact_lists = [];
-      $label = !empty($settings['group_contact_lists_label']) ? $settings['group_contact_lists_label'] : $this->t('General');
+      $label = !empty($settings['group_contact_lists_label']) ? $settings['group_contact_lists_label'] : (string) $this->t('General');
 
       if (!empty($settings['subscription']) && $settings['subscription'] == 'select') {
         foreach ($connections as $connection) {
