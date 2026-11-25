@@ -203,3 +203,6 @@ block.settings.constant_contact_mailout_subscribe_block:
     unsubscribed_message:
       type: text
       label: 'Unsubscribe message'
+    machine_name:
+      type: string
+      label: 'Machine name of the block'

@@ -182,3 +182,27 @@ function constant_contact_mailout_update_10003(&$sandbox) {
     '@count' => $updated_blocks,
   ]);
 }
+
+/**
+ * Store each subscribe block's machine name in its settings.
+ *
+ * Subscribe blocks used to find their settings by matching block titles, so
+ * blocks sharing a title all rendered and submitted with the settings of the
+ * last one. Saving the block stores its machine name, see
+ * constant_contact_mailout_block_presave().
+ */
+function constant_contact_mailout_update_10004(&$sandbox) {
+  $block_storage = \Drupal::entityTypeManager()->getStorage('block');
+  $updated_blocks = 0;
+
+  foreach ($block_storage->loadByProperties(['plugin' => 'constant_contact_mailout_subscribe_block']) as $block) {
+    if (($block->get('settings')['machine_name'] ?? NULL) !== $block->id()) {
+      $block->save();
+      $updated_blocks++;
+    }
+  }
+
+  return t('Stored the machine name on @count Constant Contact Subscribe block(s).', [
+    '@count' => $updated_blocks,
+  ]);
+}

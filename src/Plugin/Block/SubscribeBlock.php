@@ -80,10 +80,37 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
   }
 
   /**
+   * Returns the machine name of the block entity using this plugin.
+   *
+   * Blocks saved since 1.13 store it in their settings, see
+   * constant_contact_mailout_block_presave(). Older blocks are matched on their
+   * title, which is ambiguous when several blocks share it.
+   *
+   * @return string|null
+   *   The block machine name, or NULL when no block matches.
+   */
+  protected function getBlockMachineName() {
+    if (!empty($this->configuration['machine_name'])) {
+      return $this->configuration['machine_name'];
+    }
+
+    $machine_name = NULL;
+
+    foreach (Block::loadMultiple() as $id => $block) {
+      if ($block->getPluginId() == $this->getPluginId() && $block->get('settings')['label'] == $this->configuration['label']) {
+        $machine_name = $id;
+      }
+    }
+
+    return $machine_name;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
     return [
+      'machine_name' => NULL,
       'description' => NULL,
       'fields' => [],
       'subscription' => 'select',
@@ -343,16 +370,10 @@ class SubscribeBlock extends BlockBase implements ContainerFactoryPluginInterfac
   public function build() {
     $configuration = $this->configuration;
 
-    // Get block settings, include in configuration.
-    $blocks = Block::loadMultiple();
-    foreach ($blocks as $key => $block) {
-      $settings = $block->get('settings');
-
-      if ($settings['label'] == $this->configuration['label']) {
-        $configuration['settings'] = $settings;
-        $configuration['settings']['machine_name'] = $key;
-      }
-    }
+    // The form is built from this block's own settings. The machine name lets
+    // the submit callback load the same block again.
+    $configuration['settings'] = $this->configuration;
+    $configuration['settings']['machine_name'] = $this->getBlockMachineName();
 
     $build = [
       '#theme' => 'subscribe_block',

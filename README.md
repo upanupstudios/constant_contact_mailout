@@ -151,6 +151,9 @@ line the recipient sees is not affected.
 3. Optionally group the contact list checkboxes under labels, add a select-all
    checkbox, and set the messages shown after subscribing and unsubscribing.
 
+Each subscribe block keeps its own settings, so several blocks can share a
+title. The block's machine name is stored in its settings when it is saved.
+
 A submission that spans several connections is reported to the visitor as a
 single outcome. When a subscription fails, the visitor is asked to try again
 later; the error returned by Constant Contact is not shown to them.

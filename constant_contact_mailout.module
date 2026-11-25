@@ -5,6 +5,7 @@
  * Constant Contact Mailout module.
  */
 
+use Drupal\block\BlockInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
@@ -135,5 +136,25 @@ function constant_contact_mailout_cron($forceRefresh = FALSE) {
     foreach ($connections as $connection) {
       $api->refreshAccessToken($connection, $forceRefresh);
     }
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for block entities.
+ *
+ * Stores the block's own machine name in the settings of a subscribe block.
+ * The block plugin is not told which block entity it belongs to, and the
+ * subscribe form needs it to load the block's settings when it is submitted.
+ */
+function constant_contact_mailout_block_presave(BlockInterface $block) {
+  if ($block->getPluginId() !== 'constant_contact_mailout_subscribe_block') {
+    return;
+  }
+
+  $settings = $block->get('settings');
+
+  if (($settings['machine_name'] ?? NULL) !== $block->id()) {
+    $settings['machine_name'] = $block->id();
+    $block->set('settings', $settings);
   }
 }
